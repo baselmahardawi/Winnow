@@ -18,7 +18,7 @@ Winnow runs entirely in your browser. Your files are read locally and are **neve
 2. Rename the sources if needed (click a source name). Names shown in amber were not recognised; rename them to the database name so the PRISMA diagram is correct.
 3. Open **Needs review** and decide each flagged pair: *Same paper* or *Different papers*.
 4. Check the **Removed** tab, which lists every removal with its reason.
-5. Optional: under **Exclude automatically**, tick the study types that are ineligible for your review, then check the **Auto-excluded** tab and restore any record that should be screened.
+5. Optional: under **Exclude automatically (optional)**, tick the study types your review does not include (nothing is excluded unless you tick it), then check the **Auto-excluded** tab and restore any record that should be screened.
 6. Export the unique records (RIS or CSV) for your screening platform, the deduplication log (CSV) and, if you used automatic exclusion, the auto-excluded records (CSV).
 7. Create the PRISMA flow diagram (Word) and complete the screening fields after screening.
 

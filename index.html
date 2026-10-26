@@ -100,8 +100,15 @@ body{display:flex;flex-direction:column;min-height:100vh}
 .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--mute);margin-bottom:14px}
 .legend b{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
 @media (max-width:760px){.hero-in{grid-template-columns:1fr;padding-top:30px}}
-.exbox{margin:18px 0 4px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
+.exbox{margin:18px 0 24px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
 .exbox label{margin-right:18px;white-space:nowrap}
+.exhead{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.exhead b{font-size:15px}
+.pill{font-size:12px;font-weight:600;color:var(--acc);border:1px solid var(--acc);border-radius:20px;padding:1px 9px}
+.exsub{font-size:13px;color:var(--mute)}
+.exlock{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-size:13px;font-weight:600;color:var(--acc)}
+.exbox.locked label{opacity:.5;cursor:not-allowed}
+.exbox:not(.locked) .exlock{display:none}
 .chips span.unk{border-color:var(--flag);background:var(--flagbg)}
 .totop{position:fixed;right:max(18px,env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:6px;background:var(--acc);color:var(--acc-ink);border-color:var(--acc);border-radius:22px;padding:10px 16px;box-shadow:0 4px 14px rgba(0,0,0,.18);opacity:0;visibility:hidden;transform:translateY(8px);transition:opacity .2s,transform .2s,visibility .2s;z-index:10}
 .totop.on{opacity:1;visibility:visible;transform:none}
@@ -114,7 +121,7 @@ body{display:flex;flex-direction:column;min-height:100vh}
 <div>
 <h1>Winnow</h1>
 <p class="tag">The step before screening in a systematic review, in a few clicks.</p>
-<ul class="feats"><li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/><path d="M11 14l2 2 4-4"/></svg><div><b>Remove duplicates</b><span>Certain matches go; doubtful pairs are yours to decide</span></div></li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg><div><b>Exclude irrelevant studies</b><span>Case reports, reviews and more, with the evidence shown</span></div></li><li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><rect x="8" y="17" width="8" height="4" rx="1"/><path d="M12 7v10"/><rect x="17" y="10" width="5" height="4" rx="1"/><path d="M12 12h5"/></svg><div><b>Generate PRISMA diagram</b><span>Flow diagram with counts filled in, in Word</span></div></li><li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg><div><b>Private by design</b><span>Runs in your browser; files are never uploaded</span></div></li></ul>
+<ul class="feats"><li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/><path d="M11 14l2 2 4-4"/></svg><div><b>Remove duplicates</b><span>Certain matches go; doubtful pairs are yours to decide</span></div></li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg><div><b>Exclude irrelevant studies</b><span>Optional: tick the study types your review does not include, and Winnow excludes them for you</span></div></li><li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><rect x="8" y="17" width="8" height="4" rx="1"/><path d="M12 7v10"/><rect x="17" y="10" width="5" height="4" rx="1"/><path d="M12 12h5"/></svg><div><b>Generate PRISMA diagram</b><span>Flow diagram with counts filled in, in Word</span></div></li><li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg><div><b>Private by design</b><span>Runs in your browser; files are never uploaded</span></div></li></ul>
 </div>
 <svg class="viz" viewBox="0 0 520 300" role="img" aria-label="Files from Scopus, PubMed and Cochrane go into Winnow, which outputs one list of unique records and sets doubtful pairs aside for review">
 <defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="arh"/></marker></defs>
@@ -145,22 +152,26 @@ body{display:flex;flex-direction:column;min-height:100vh}
 <input id="file" type="file" multiple accept=".ris,.nbib,.txt,.csv,.ciw" hidden></label>
 <div class="row"><button id="sample">Load sample data</button><button id="reset">Clear saved session</button><span id="saved" style="font-size:13px;color:var(--mute)"></span><span id="notice" style="font-size:13px;color:var(--flag);font-weight:600"></span></div>
 
+<section class="exbox locked" id="exbox">
+<div class="exhead"><b>Exclude automatically (optional)</b><span class="exsub">applied after duplicates are resolved</span></div>
+<div class="row" id="exchk" style="margin:8px 0">
+<label><input type="checkbox" autocomplete="off" disabled data-ex="case"> Case reports</label>
+<label><input type="checkbox" autocomplete="off" disabled data-ex="sr"> Systematic reviews and meta-analyses</label>
+<label><input type="checkbox" autocomplete="off" disabled data-ex="retro"> Retrospective studies</label>
+<label><input type="checkbox" autocomplete="off" disabled data-ex="vitro"> In-vitro studies</label>
+<label><input type="checkbox" autocomplete="off" disabled data-ex="animal"> Animal studies</label>
+</div>
+<p class="exlock" id="exlock"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> Add your search results above to choose.</p>
+<p style="margin:0;font-size:13px;color:var(--mute)">A record is excluded only when its title, abstract or PubMed indexing states the study type explicitly. Nothing is deleted: excluded records stay in the Auto-excluded tab with the evidence, and you can restore any of them. Check them before you finalise.</p>
+<div class="row" style="margin-bottom:0"><button id="xex" hidden>Export auto-excluded (CSV)</button><span id="exnote" style="font-size:13px;color:var(--mute)"></span></div></section>
+
 <section id="res" class="hide">
 <p style="margin:0 0 6px;font-size:13px;color:var(--mute)">Sources (names are detected from the files; click a name to rename it. Amber means not recognised)</p>
 <div class="chips" id="chips"></div>
 <div class="stats" id="stats"></div>
 <div id="bar"></div>
 <div class="row"><button class="p" id="xris">Export unique records (RIS)</button><button id="xcsv">Export unique records (CSV)</button><button id="xlog">Export deduplication log (CSV)</button><button id="xprisma">PRISMA flow diagram (Word)</button></div>
-<section class="exbox"><b>Exclude automatically</b> <span style="color:var(--mute);font-size:13px">applied after duplicates are resolved</span>
-<div class="row" id="exchk" style="margin:8px 0">
-<label><input type="checkbox" autocomplete="off" data-ex="case"> Case reports</label>
-<label><input type="checkbox" autocomplete="off" data-ex="sr"> Systematic reviews and meta-analyses</label>
-<label><input type="checkbox" autocomplete="off" data-ex="retro"> Retrospective studies</label>
-<label><input type="checkbox" autocomplete="off" data-ex="vitro"> In-vitro studies</label>
-<label><input type="checkbox" autocomplete="off" data-ex="animal"> Animal studies</label>
-</div>
-<p style="margin:0;font-size:13px;color:var(--mute)">A record is excluded only when its title, abstract or PubMed indexing states the study type explicitly. Nothing is deleted: excluded records stay in the Auto-excluded tab with the evidence, and you can restore any of them. Check them before you finalise.</p>
-<div class="row" style="margin-bottom:0"><button id="xex" hidden>Export auto-excluded (CSV)</button><span id="exnote" style="font-size:13px;color:var(--mute)"></span></div></section>
+
 <div class="tabs" role="tablist" id="tabs"></div>
 <div id="view"></div>
 
@@ -376,7 +387,7 @@ function refresh(){
   if(!all.length)return;
   const prev={};pairs.forEach(p=>{if(p.dec)prev[pk(p)]=p.dec});
   run(all);pairs.forEach(p=>{if(prev[pk(p)])p.dec=prev[pk(p)]});
-  $('#res').classList.remove('hide');
+  $('#res').classList.remove('hide');lockEx(false);
   $('#chips').innerHTML=Object.entries(per).map(([k,v])=>'<span'+(unrec.has(k)?' class="unk" title="Not recognised: rename it to the database name for the PRISMA diagram"':'')+'><input class="lbl" data-src="'+esc(k)+'" value="'+esc(k)+'" size="'+Math.max(6,Math.min(k.length,30))+'" aria-label="Rename source '+esc(k)+'"> '+v+'</span>').join('');
   draw();
   if(!restoring)saveData();
@@ -597,6 +608,7 @@ function computeEx(f){
 function viewEx(){
   return exl.length?exl.map((x,i)=>'<div class="item">'+cite(x.r)+'<small><b>'+esc(EX[x.k].label)+'</b>: '+esc(x.why)+'</small><button data-keep="'+i+'" style="margin-top:6px">Keep for screening</button></div>').join(''):'<p class="sub">No records were excluded.</p>';
 }
+function lockEx(on){$('#exbox').classList.toggle('locked',on);document.querySelectorAll('[data-ex]').forEach(c=>c.disabled=on)}
 function syncEx(){document.querySelectorAll('[data-ex]').forEach(c=>{c.checked=ex.on.has(c.dataset.ex)})}
 function resetEx(){ex.on.clear();ex.keep.clear();syncEx();exl=[];scr=[];if(tab==='exc')tab='rev'}
 function saveEx(){kvSet('ex',{on:[...ex.on],keep:[...ex.keep]})}
@@ -623,7 +635,7 @@ const dz=$('#drop');
 ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over')}));
 dz.addEventListener('drop',e=>addFiles(e.dataTransfer.files));
 dz.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('#file').click()}});
-$('#reset').onclick=()=>{all=[];rawAll=[];per={};kept=[];pairs=[];removed=[];$('#res').classList.add('hide');$('#file').value='';kvClear();resetEx();unrec.clear();seen.clear();$('#notice').textContent='';$('#saved').textContent='Saved session cleared'};
+$('#reset').onclick=()=>{all=[];rawAll=[];per={};kept=[];pairs=[];removed=[];$('#res').classList.add('hide');lockEx(true);$('#file').value='';kvClear();resetEx();unrec.clear();seen.clear();$('#notice').textContent='';$('#saved').textContent='Saved session cleared'};
 $('#tabs').onclick=e=>{const t=e.target.dataset.t;if(t){tab=t;draw()}};
 $('#view').onclick=e=>{const b=e.target.closest('button[data-d]');if(b){pairs[+b.dataset.i].dec=b.dataset.d;draw();saveDec()}};
 function renameSrc(old,nw){
