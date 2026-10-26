@@ -141,8 +141,8 @@ body{display:flex;flex-direction:column;min-height:100vh}
 </svg>
 </div></header>
 <main>
-<label class="drop" id="drop" tabindex="0"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg><b>Drop files here or click to choose</b><span>RIS, PubMed/MEDLINE (.nbib, .txt) and CSV (Scopus, Cochrane, others)</span>
-<input id="file" type="file" multiple accept=".ris,.nbib,.txt,.csv" hidden></label>
+<label class="drop" id="drop" tabindex="0"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg><b>Drop files here or click to choose</b><span>RIS, PubMed/MEDLINE (.nbib, .txt), Web of Science (.txt, .ciw) and CSV (Scopus, Cochrane, others)</span>
+<input id="file" type="file" multiple accept=".ris,.nbib,.txt,.csv,.ciw" hidden></label>
 <div class="row"><button id="sample">Load sample data</button><button id="reset">Clear saved session</button><span id="saved" style="font-size:13px;color:var(--mute)"></span><span id="notice" style="font-size:13px;color:var(--flag);font-weight:600"></span></div>
 
 <section id="res" class="hide">
@@ -174,10 +174,10 @@ body{display:flex;flex-direction:column;min-height:100vh}
 </div></section>
 <section class="steps"><h2>About Winnow</h2><div class="grid3">
 <div class="step"><h3>How matching works</h3><p>Records are compared on DOI and PMID first, then on title, year and first author. Titles are compared without capitals, accents or punctuation, using character-pair similarity. Only certain matches are removed. Everything else that looks similar is flagged for you.</p></div>
-<div class="step"><h3>What to know</h3><p>Winnow is a pilot version. It reads RIS, PubMed (.nbib) and CSV files, and the matching thresholds are still being validated. Check the Removed tab and the flagged pairs before relying on a result. Trial registry entries are flagged when their title matches a publication. The optional exclusion of study types uses only explicit statements in the title, abstract or PubMed indexing, and every excluded record is listed with its evidence so you can restore it.</p></div>
+<div class="step"><h3>What to know</h3><p>Winnow is being validated, so check its results before relying on them. It reads RIS, PubMed (.nbib), Web of Science (plain text, tab-delimited or RIS) and CSV files. Check the Removed tab and the flagged pairs before relying on a result. Trial registry entries are flagged when their title matches a publication. The optional exclusion of study types uses only explicit statements in the title, abstract or PubMed indexing, and every excluded record is listed with its evidence so you can restore it.</p></div>
 <div class="step"><h3>Privacy and use</h3><p>Your files are read in your browser and never uploaded. The saved session stays in this browser only, so use Clear saved session when you finish a review. Winnow is released under the MIT licence.</p></div>
 </div></section>
-<p class="note">Records are processed in your browser and are not uploaded. Matching order: DOI, PMID, exact normalised title with year and first author, then fuzzy title similarity (bigram Dice). Anything short of a certain match is flagged, never removed silently. Version 0.2.0 (pilot).</p>
+<p class="note">Records are processed in your browser and are not uploaded. Matching order: DOI, PMID, exact normalised title with year and first author, then fuzzy title similarity (bigram Dice). Anything short of a certain match is flagged, never removed silently. Version 1.0.0.</p>
 </main>
 <button class="totop" id="totop" aria-label="Back to top" title="Back to top"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Top</button>
 <script>
@@ -251,6 +251,61 @@ function fromCSV(t,src){
   }).filter(o=>o.ti);
 }
 
+/* ---------- Web of Science (plain text / .ciw and tab-delimited) ---------- */
+function wosAdd(r,k,v,c){
+  switch(k){
+    case'TI':r.ti=c?(r.ti||'')+' '+v:v;break;
+    case'AB':r.ab=c?(r.ab||'')+' '+v:v;break;
+    case'AU':if(v)r.au.push(v);break;
+    case'SO':if(!c)r.jo=v;else r.jo=(r.jo||'')+' '+v;break;
+    case'PY':r.yr=(v.match(/\d{4}/)||[])[0];break;
+    case'VL':r.vo=v;break;
+    case'IS':r.is=v;break;
+    case'BP':r.sp=v;break;
+    case'EP':r.ep=v;break;
+    case'DI':r.doi=v;break;
+    case'PM':r.pmid=v;break;
+  }
+}
+const isWosTagged=t=>/^(﻿)?FN (Clarivate|Thomson|ISI)/m.test(t.slice(0,300))||(/^PT [A-Z]\s*$/m.test(t)&&/^UT (WOS|ISI):/m.test(t));
+const isWosTab=t=>{const h=(t.replace(/^﻿/,'').split(/\r?\n/,1)[0]||'').split('\t');return h.includes('TI')&&h.includes('AU')&&(h.includes('UT')||h[0]==='PT')};
+function wosTagged(t,src){
+  const out=[];let r=null,last=null;
+  for(const line of t.replace(/^﻿/,'').split(/\r?\n/)){
+    if(/^ER\s*$/.test(line)){if(r)out.push(r);r=null;last=null;continue}
+    const m=line.match(/^([A-Z][A-Z0-9]) (.*)$/);
+    if(m){
+      const k=m[1],v=m[2].trim();
+      if(k==='PT'){if(r)out.push(r);r={src,au:[]}}
+      if(!r)continue;
+      last=k;wosAdd(r,k,v,false);
+    }else if(r&&last&&/^\s+\S/.test(line))wosAdd(r,last,line.trim(),last!=='AU');
+  }
+  if(r)out.push(r);
+  return out.filter(o=>o.ti);
+}
+function wosTab(t,src){
+  const rows=t.replace(/^﻿/,'').split(/\r?\n/).filter(x=>x.trim());
+  const h=rows.shift().split('\t').map(x=>x.trim());
+  return rows.map(line=>{
+    const c=line.split('\t'),r={src,au:[]};
+    h.forEach((k,i)=>{const v=(c[i]||'').trim();if(!v)return;if(k==='AU')r.au=v.split(';').map(s=>s.trim()).filter(Boolean);else wosAdd(r,k,v,false)});
+    return r;
+  }).filter(o=>o.ti);
+}
+function parseAny(name,text,src){
+  if(isWosTagged(text))return wosTagged(text,src);
+  if(isWosTab(text))return wosTab(text,src);
+  const isCsv=/\.csv$/i.test(name)||(!/^[A-Z][A-Z0-9]{1,3}\s{0,2}-/m.test(text)&&text.includes(','));
+  return isCsv?fromCSV(text,src):tagged(text,src);
+}
+async function readText(f){
+  const b=new Uint8Array(await f.arrayBuffer());
+  if(b[0]===0xFF&&b[1]===0xFE)return new TextDecoder('utf-16le').decode(b);
+  if(b[0]===0xFE&&b[1]===0xFF)return new TextDecoder('utf-16be').decode(b);
+  return new TextDecoder('utf-8').decode(b);
+}
+
 /* ---------- matching ---------- */
 const nz=s=>(s||'').toLowerCase().normalize('NFD').replace(/\p{M}/gu,'').replace(/<[^>]+>/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 const nd=d=>(d||'').toLowerCase().replace(/^https?:\/\/(dx\.)?doi\.org\//,'').replace(/^doi:\s*/,'').trim();
@@ -276,6 +331,7 @@ function judge(a,b){
 function merge(c,r){
   for(const k of['ti','ab','jo','vo','is','sp','ep','yr','doi','pmid'])if(!c[k]&&r[k])c[k]=r[k];
   if(!c.au.length)c.au=r.au;
+  for(const k of['pt','mh'])if(r[k]&&r[k].length)c[k]=[...new Set([...(c[k]||[]),...r[k]])];
   c.d=nd(c.doi);c.srcs=[...new Set([...c.srcs,r.src])];
 }
 function run(recs){
@@ -311,8 +367,7 @@ function ingest(name,text){
   seen.add(fk);
   const fb=name.replace(/\.[^.]+$/,''),dbn=guessDb(name,text),src=dbn||fb;
   if(!dbn)unrec.add(fb);
-  const isCsv=/\.csv$/i.test(name)||(!/^[A-Z][A-Z0-9]{1,3}\s{0,2}-/m.test(text)&&text.includes(','));
-  const raw=isCsv?fromCSV(text,src):tagged(text,src);
+  const raw=parseAny(name,text,src);
   rawAll.push(...raw.map(r=>structuredClone(r)));
   const recs=raw.map(prep);
   per[src]=(per[src]||0)+recs.length;all.push(...recs);
@@ -407,7 +462,7 @@ const DBS=[
  ['Scopus',/scopus/i,/scopus\.com|^DB {2}- *Scopus/im],
  ['PubMed',/pubmed|medline/i,/pubmed\.ncbi|ncbi\.nlm\.nih\.gov\/pubmed|^DB {2}- *(PubMed|MEDLINE)/im],
  ['Embase',/embase/i,/embase\.com|^DB {2}- *Embase/im],
- ['Web of Science',/web[ _-]?of[ _-]?science|savedrecs|\bwos\b/i,/webofscience|webofknowledge|isiknowledge|^DB {2}- *Web of Science/im],
+ ['Web of Science',/web[ _-]?of[ _-]?science|savedrecs|\bwos\b|\.ciw$/i,/webofscience|webofknowledge|isiknowledge|^DB {2}- *Web of Science|^FN (Clarivate|Thomson)|^UT WOS:|^AN {2}- WOS:|^PT\tAU\t/im],
  ['Cochrane Library',/cochrane|\bcentral\b/i,/cochranelibrary|^DB {2}- *Cochrane/im],
  ['Dentistry & Oral Sciences Source',/dentistry|oral[ _-]?sciences?|dossrc/i,/^DB {2}- *Dentistry|Dentistry (&|and|&amp;) Oral Sciences?/im],
  ['CINAHL',/cinahl/i,/cinahl/i],['PsycINFO',/psyc ?info/i,/psycinfo/i],['LILACS',/lilacs/i,/lilacs/i],
@@ -415,7 +470,7 @@ const DBS=[
 ];
 function guessDb(name,text){
   const byName=DBS.find(d=>d[1].test(name));if(byName)return byName[0];
-  const head=text.slice(0,4000);
+  const head=text.slice(0,20000);
   if(/^PMID- /m.test(head)&&/^(OWN|STAT|SO) {1,2}- /m.test(text.slice(0,8000)))return'PubMed';
   const first=text.split(/\r?\n/,1)[0]||'';
   if(/(^|,)"?EID"?(,|$)/.test(first)&&/Source title/i.test(first))return'Scopus';
@@ -473,7 +528,7 @@ function prismaDocx(){
   const tbl='<w:tbl><w:tblPr><w:tblW w:w="9060" w:type="dxa"/><w:jc w:val="center"/><w:tblLayout w:type="fixed"/></w:tblPr>'+grid+rows+'</w:tbl>';
   const day=new Date().toISOString().slice(0,10);
   const body=p('PRISMA 2020 flow diagram',true,'left',32)
-   +p('Identification and deduplication counts were filled in by Winnow (version 0.2.0) on '+day+'. Empty fields are to be completed after screening.',false,'left',18,true)
+   +p('Identification and deduplication counts were filled in by Winnow (version 1.0.0) on '+day+'. Empty fields are to be completed after screening.',false,'left',18,true)
    +tbl
    +p('',false)
    +p('From: Page MJ, McKenzie JE, Bossuyt PM, et al. The PRISMA 2020 statement: an updated guideline for reporting systematic reviews. BMJ 2021;372:n71. doi: 10.1136/bmj.n71. For more information, visit: http://www.prisma-statement.org/',false,'left',16,true);
@@ -495,7 +550,9 @@ $('#xprisma').onclick=()=>{
 /* ---------- automatic exclusion ---------- */
 const EX={
  case:{label:'Case reports',
-  T:[/\bcase reports?\b/,/\breport of (an? |\d+ |two |three |four |five )?cases?\b/,/^an? (\w+ ){0,6}?case of\b/],
+  T:[/\bcase reports?\b/,/\breport of (an? |one |two |three |[1-3] )?cases?\b/,/^an? (\w+ ){0,6}?case of\b/],
+  skipAll:/\bcase[- ]series\b|\bseries of\b|\bcohort\b|\bconsecutive (patients|cases)\b/,
+  rej:/\b([4-9]|\d{2,})\b|\b(four|five|six|seven|eight|nine|ten|eleven|twelve|several|multiple|many)\b/,
   A:[/\b(this|the present|our) case report\b/,/\bwe (report|present|describe) (an? |one |two |three )(\w+ ){0,4}?cases?\b/],
   P:/^case reports?$/i},
  sr:{label:'Systematic reviews and meta-analyses',
@@ -519,11 +576,13 @@ function classify(r,on){
   const ti=(r.ti||'').toLowerCase(),ab=(r.ab||'').toLowerCase(),mh=r.mh||[];
   for(const k of on){
     const e=EX[k];
-    if(!(e.skipT&&e.skipT.test(ti))){const m=e.T.map(x=>ti.match(x)).find(Boolean);if(m)return{k,why:'Title: "'+m[0]+'"'}}
+    if(e.skipAll&&(e.skipAll.test(ti)||e.skipAll.test(ab)))continue;
+    const hit=(rs,txt)=>rs.map(x=>txt.match(x)).find(m=>m&&!(e.rej&&e.rej.test(m[0])));
+    if(!(e.skipT&&e.skipT.test(ti))){const m=hit(e.T,ti);if(m)return{k,why:'Title: "'+m[0]+'"'}}
     const p=e.P&&(r.pt||[]).find(x=>e.P.test(x));if(p)return{k,why:'PubMed publication type: '+p};
     if(e.M&&mh.some(x=>e.M.test(x))&&!(e.skipM&&mh.some(x=>e.skipM.test(x))))return{k,why:'MeSH term: Retrospective Studies'};
     if(e.H&&mh.includes('Animals')&&!mh.includes('Humans'))return{k,why:'MeSH term: Animals (without Humans)'};
-    if(ab&&e.A&&!(e.skipA&&e.skipA.test(ab))){const m=e.A.map(x=>ab.match(x)).find(Boolean);if(m)return{k,why:'Abstract: "'+m[0].slice(0,80)+'"'}}
+    if(ab&&e.A&&!(e.skipA&&e.skipA.test(ab))){const m=hit(e.A,ab);if(m)return{k,why:'Abstract: "'+m[0].slice(0,80)+'"'}}
   }
   return null;
 }
@@ -554,7 +613,7 @@ $('#xex').onclick=()=>dl('auto-excluded.csv',[['Category','Evidence','Title','Au
 /* ---------- events ---------- */
 async function addFiles(fl){
   const sk=[];
-  for(const f of fl){if(ingest(f.name,await f.text())===false)sk.push(f.name)}
+  for(const f of fl){if(ingest(f.name,await readText(f))===false)sk.push(f.name)}
   refresh();
   $('#notice').textContent=sk.length?'Already loaded, so skipped: '+sk.join(', '):'';
 }

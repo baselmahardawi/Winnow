@@ -3,7 +3,7 @@
 **Get your search results ready for screening in systematic reviews.** Winnow takes the search results you exported from Scopus, PubMed, Cochrane and other databases, removes the duplicates it is certain about, sets doubtful pairs side by side for you to resolve, and can optionally exclude records whose study type is clearly ineligible (for example case reports or systematic reviews). It then exports a clean list for your screening platform, a log of every decision, and a PRISMA 2020 flow diagram with the identification and deduplication counts filled in.
 
 - Live tool: [winnowsr.com](https://winnowsr.com)
-- Version: 0.2.0 (pilot)
+- Version: 1.0.0
 - Licence: MIT
 
 ![Winnow with the sample data loaded](screenshot.png)
@@ -26,11 +26,12 @@ Winnow runs entirely in your browser. Your files are read locally and are **neve
 
 | Format | Typical source |
 |---|---|
-| RIS (`.ris`) | Cochrane, Scopus, Embase*, Web of Science*, reference managers |
+| RIS (`.ris`) | Cochrane, Scopus, Web of Science, Embase*, reference managers |
 | PubMed/MEDLINE (`.nbib`, `.txt`) | PubMed |
+| Web of Science plain text (`.txt`, `.ciw`) or tab-delimited (`.txt`, UTF-8 or UTF-16) | Web of Science |
 | CSV (`.csv`) with columns such as Title, Authors, Year, Source title, Volume, Issue, Page start/end, DOI, PubMed ID, Abstract | Scopus and others |
 
-\*RIS from these databases may work but has not been tested. BibTeX and EndNote XML are not supported yet.
+\*RIS from Embase may work but has not been tested. BibTeX and EndNote XML are not supported yet.
 
 ## How matching works
 
@@ -49,7 +50,7 @@ Titles are normalised (lower case, accents and punctuation removed) and compared
 | Title at least 80% similar, year within one, same first author or start page | Flag |
 | Anything else | Treated as different records |
 
-When a duplicate is removed, missing fields in the kept record are filled from the removed one, and every source is listed in the exports. A flagged pair keeps both records until you decide.
+When a duplicate is removed, missing fields in the kept record are filled from the removed one, PubMed publication types and MeSH terms are carried over (so automatic exclusion gives the same result whatever order the files are added in), and every source is listed in the exports. A flagged pair keeps both records until you decide.
 
 These thresholds are starting values and are still being validated. Do not treat them as final.
 
@@ -59,7 +60,7 @@ Automatic exclusion is off by default and is applied only after duplicates are r
 
 | Category | Evidence used |
 |---|---|
-| Case reports | Title wording (e.g. "case report", "a case of"), PubMed publication type, or abstract wording such as "we report a case" |
+| Case reports | Title wording (e.g. "case report", "a case of", "report of two cases"), PubMed publication type, or abstract wording such as "we report a case". Case series are not excluded: a record that mentions a case series, a "series of" cases, a cohort or consecutive patients, or reports more than three cases, is kept |
 | Systematic reviews and meta-analyses | Title wording, PubMed publication type, or abstract wording such as "this meta-analysis". Protocols are not excluded |
 | Retrospective studies | "Retrospective" in the title or abstract, or the MeSH term Retrospective Studies. A mention of "prospective" in the same title or abstract prevents a match |
 | In-vitro studies | "In vitro" in the title or abstract (not in-vitro fertilisation or diagnostics). A mention of in-vivo or clinical work in the same title or abstract prevents a match |
@@ -80,7 +81,7 @@ Always check the auto-excluded records before you finalise.
 - **Auto-excluded records (CSV)**: category, evidence and bibliographic details for each excluded record.
 - **PRISMA 2020 flow diagram (Word)**: records identified per database, duplicates removed, records marked as ineligible by automation tools (by category) and records to screen. The screening and inclusion fields are left blank for you to complete. Winnow warns you if source names were not recognised or flagged pairs are still unresolved.
 
-## Validation (pilot)
+## Validation
 
 Validation is in progress. The first pilot (version 0.1.0) compared Winnow with Rayyan on one review:
 
@@ -98,6 +99,7 @@ One review is a pilot, not evidence of accuracy. The full results will be report
 ## Known limitations
 
 - Only certain formats are supported (see above).
+- A conference abstract and a full article with the same title, year and first author are treated as duplicates, unless both have DOIs and the DOIs differ, in which case the pair is flagged for you to decide.
 - Matching depends on the metadata in your exports. Records with no DOI and very short or missing titles are harder to match.
 - Registry linking only flags titles that are at least 80% similar, so some registry entries will not be linked to their publication.
 - Automatic exclusion relies on explicit wording in English. Records without an abstract are judged on the title and PubMed indexing only, and studies that do not state their design will not be excluded.
