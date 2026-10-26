@@ -157,12 +157,14 @@ body{display:flex;flex-direction:column;min-height:100vh}
 <div class="row" id="exchk" style="margin:8px 0">
 <label><input type="checkbox" autocomplete="off" disabled data-ex="case"> Case reports</label>
 <label><input type="checkbox" autocomplete="off" disabled data-ex="sr"> Systematic reviews and meta-analyses</label>
+<label><input type="checkbox" autocomplete="off" disabled data-ex="nr"> Narrative reviews</label>
+<label><input type="checkbox" autocomplete="off" disabled data-ex="edit"> Editorials, letters and errata</label>
 <label><input type="checkbox" autocomplete="off" disabled data-ex="retro"> Retrospective studies</label>
 <label><input type="checkbox" autocomplete="off" disabled data-ex="vitro"> In-vitro studies</label>
 <label><input type="checkbox" autocomplete="off" disabled data-ex="animal"> Animal studies</label>
 </div>
 <p class="exlock" id="exlock"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> Add your search results above to choose.</p>
-<p style="margin:0;font-size:13px;color:var(--mute)">A record is excluded only when its title, abstract or PubMed indexing states the study type explicitly. Nothing is deleted: excluded records stay in the Auto-excluded tab with the evidence, and you can restore any of them. Check them before you finalise.</p>
+<p style="margin:0;font-size:13px;color:var(--mute)">A record is excluded only when its title, abstract or database labels (PubMed, Scopus or Web of Science) state the study type explicitly. Nothing is deleted: excluded records stay in the Auto-excluded tab with the evidence, and you can restore any of them. Check them before you finalise.</p>
 <div class="row" style="margin-bottom:0"><button id="xex" hidden>Export auto-excluded (CSV)</button><span id="exnote" style="font-size:13px;color:var(--mute)"></span></div></section>
 
 <section id="res" class="hide">
@@ -185,7 +187,7 @@ body{display:flex;flex-direction:column;min-height:100vh}
 </div></section>
 <section class="steps"><h2>About Winnow</h2><div class="grid3">
 <div class="step"><h3>How matching works</h3><p>Records are compared on DOI and PMID first, then on title, year and first author. Titles are compared without capitals, accents or punctuation, using character-pair similarity. Only certain matches are removed. Everything else that looks similar is flagged for you.</p></div>
-<div class="step"><h3>What to know</h3><p>Winnow is being validated, so check its results before relying on them. It reads RIS, PubMed (.nbib), Web of Science (plain text, tab-delimited or RIS) and CSV files. Check the Removed tab and the flagged pairs before relying on a result. Trial registry entries are flagged when their title matches a publication. The optional exclusion of study types uses only explicit statements in the title, abstract or PubMed indexing, and every excluded record is listed with its evidence so you can restore it.</p></div>
+<div class="step"><h3>What to know</h3><p>Winnow is being validated, so check its results before relying on them. It reads RIS, PubMed (.nbib), Web of Science (plain text, tab-delimited or RIS) and CSV files. Check the Removed tab and the flagged pairs before relying on a result. Trial registry entries are flagged when their title matches a publication. The optional exclusion of study types uses only explicit statements in the title, abstract or database labels, and every excluded record is listed with its evidence so you can restore it.</p></div>
 <div class="step"><h3>Privacy and use</h3><p>Your files are read in your browser and never uploaded. The saved session stays in this browser only, so use Clear saved session when you finish a review. Winnow is released under the MIT licence.</p></div>
 </div></section>
 <p class="note">Records are processed in your browser and are not uploaded. Matching order: DOI, PMID, exact normalised title with year and first author, then fuzzy title similarity (bigram Dice). Anything short of a certain match is flagged, never removed silently. Version 1.0.0.</p>
@@ -215,6 +217,7 @@ function add(r,k,v,c){
     case'PMID':r.pmid=v;break;
     case'PT':(r.pt=r.pt||[]).push(v);break;
     case'MH':(r.mh=r.mh||[]).push(v.replace(/^\*/,'').split('/')[0]);break;
+    case'M3':(r.dt=r.dt||[]).push(...v.split(';').map(x=>x.trim()).filter(Boolean));break;
   }
 }
 function tagged(t,src){
@@ -250,14 +253,14 @@ function fromCSV(t,src){
   const rows=csvRows(t.replace(/^\uFEFF/,''));
   const h=rows.shift().map(x=>x.toLowerCase().trim());
   const f=(...n)=>{for(const x of n){const i=h.indexOf(x);if(i>=0)return i}return -1};
-  const c={ti:f('title','article title','document title'),au:f('authors','author','author(s)','author full names'),yr:f('year','publication year','pubyear','publication date'),jo:f('source title','journal','journal/book','publication title','journal title'),vo:f('volume'),is:f('issue'),sp:f('page start','start page'),ep:f('page end','end page'),pg:f('pages','page'),doi:f('doi'),pmid:f('pmid','pubmed id'),ab:f('abstract'),notes:f('notes')};
+  const c={ti:f('title','article title','document title'),au:f('authors','author','author(s)','author full names'),yr:f('year','publication year','pubyear','publication date'),jo:f('source title','journal','journal/book','publication title','journal title'),vo:f('volume'),is:f('issue'),sp:f('page start','start page'),ep:f('page end','end page'),pg:f('pages','page'),doi:f('doi'),pmid:f('pmid','pubmed id'),ab:f('abstract'),notes:f('notes'),dt:f('document type','publication type')};
   const g=(r,k)=>c[k]>=0?(r[c[k]]||'').trim():'';
   return rows.map(r=>{
     const o={src,au:g(r,'au')?g(r,'au').split(';').map(s=>s.trim()).filter(Boolean):[]};
     o.ti=g(r,'ti');o.yr=(g(r,'yr').match(/\d{4}/)||[])[0];o.jo=g(r,'jo');o.vo=g(r,'vo');o.is=g(r,'is');
     o.sp=g(r,'sp');o.ep=g(r,'ep');
     if(!o.sp&&g(r,'pg')){const p=g(r,'pg').split('-');o.sp=p[0];o.ep=p[1]||''}
-    o.doi=g(r,'doi');o.pmid=g(r,'pmid');o.ab=g(r,'ab');const dm=g(r,'notes').match(/RAYYAN-INCLUSION:.*?=>\s*"(\w+)"/);if(dm)o.dec=dm[1];
+    o.doi=g(r,'doi');o.pmid=g(r,'pmid');o.ab=g(r,'ab');if(g(r,'dt'))o.dt=g(r,'dt').split(';').map(x=>x.trim()).filter(Boolean);const dm=g(r,'notes').match(/RAYYAN-INCLUSION:.*?=>\s*"(\w+)"/);if(dm)o.dec=dm[1];
     return o;
   }).filter(o=>o.ti);
 }
@@ -276,6 +279,7 @@ function wosAdd(r,k,v,c){
     case'EP':r.ep=v;break;
     case'DI':r.doi=v;break;
     case'PM':r.pmid=v;break;
+    case'DT':r.dt=v.split(';').map(x=>x.trim()).filter(Boolean);break;
   }
 }
 const isWosTagged=t=>/^(﻿)?FN (Clarivate|Thomson|ISI)/m.test(t.slice(0,300))||(/^PT [A-Z]\s*$/m.test(t)&&/^UT (WOS|ISI):/m.test(t));
@@ -342,7 +346,7 @@ function judge(a,b){
 function merge(c,r){
   for(const k of['ti','ab','jo','vo','is','sp','ep','yr','doi','pmid'])if(!c[k]&&r[k])c[k]=r[k];
   if(!c.au.length)c.au=r.au;
-  for(const k of['pt','mh'])if(r[k]&&r[k].length)c[k]=[...new Set([...(c[k]||[]),...r[k]])];
+  for(const k of['pt','mh','dt'])if(r[k]&&r[k].length)c[k]=[...new Set([...(c[k]||[]),...r[k]])];
   c.d=nd(c.doi);c.srcs=[...new Set([...c.srcs,r.src])];
 }
 function run(recs){
@@ -398,7 +402,7 @@ function draw(){
   const st=[[all.length,'Records identified'],[removed.length+man,'Duplicates removed'],[open,'Pairs to review'],[f.length,'Unique records']];
   if(ex.on.size)st.push([scr.length,'To screen']);
   $('#xex').hidden=!ex.on.size;
-  $('#exnote').textContent=ex.on.size?'The unique-records exports leave out these '+exl.length+' auto-excluded records. Keep the CSV as your record of them.':'';
+  $('#exnote').textContent=ex.on.size?'The unique-records exports leave out '+(exl.length===1?'this auto-excluded record. Keep the CSV as your record of it.':'these '+exl.length+' auto-excluded records. Keep the CSV as your record of them.'):'';
   $('#stats').innerHTML=st.map(s=>'<div class="st"><b>'+s[0]+'</b><span>'+s[1]+'</span></div>').join('');
   const tot=all.length||1,remn=removed.length+man,clean=Math.max(f.length-open,0);
   $('#bar').innerHTML='<div class="bar" role="img" aria-label="Share of records removed, awaiting review, and unique">'+[[remn,'var(--rem)'],[open,'var(--flag)'],[clean,'var(--acc)']].map(c=>'<i style="width:'+(c[0]/tot*100)+'%;background:'+c[1]+'"></i>').join('')+'</div><div class="legend"><span><b style="background:var(--rem)"></b>Duplicates removed ('+remn+')</span><span><b style="background:var(--flag)"></b>Awaiting your review ('+open+')</span><span><b style="background:var(--acc)"></b>Unique ('+clean+')</span></div>';
@@ -570,6 +574,16 @@ const EX={
   T:[/\bsystematic(ally)? reviews?\b/,/\bmeta[- ]?analys[ie]s\b/],skipT:/\b(protocol|registered report)\b/,
   A:[/\b(this|the present|our|current) (systematic review|meta[- ]?analysis)\b/,/\bwe (conducted|performed|carried out|undertook) an? (systematic review|meta[- ]?analysis)\b/],
   P:/^(systematic review|meta-analysis)$/i},
+ nr:{label:'Narrative reviews',
+  T:[/\bnarrative review\b/,/\bliterature review\b/,/\breview of (the )?(current |recent |published |existing |available )?literature\b/,/\bstate[- ]of[- ]the[- ]art review\b/,/\bcritical review\b/,/[:.\u2013\u2014-]\s*(a |an )?(narrative |critical |comprehensive |brief |short |concise |clinical |contemporary |updated |current |practical )?(review|overview)\s*\.?\s*$/],
+  skipAll:/\bsystematic(ally)? (review|literature|search)|\bmeta[- ]?analys[ie]s\b|\bscoping review\b|\bumbrella review\b|\boverview of (systematic )?reviews\b|\brapid review\b|\bcase reports?\b|\bcase series\b|\bcase presentation\b|\bstudy protocol\b|\bprotocol for\b/,
+  skipT:/\b(retrospective|chart|charts|record|records|registry|database|cohort|clinical|peer|file|case[- ]note) review\b|\breview of (\d+|[\w-]+ )?(patients|cases|charts|records|medical records|implants)\b/,
+  A:[/\bin this (narrative |literature |critical |comprehensive )?review\b/,/\b(this|the present|our|current) (narrative |literature |critical |comprehensive )?review (aims|summari[sz]es|discusses|describes|provides|highlights|focuses|examines|explores|outlines|presents|covers|addresses|updates)\b/,/\bthis (article|paper|chapter) reviews\b/,/\bwe (review|summari[sz]e|discuss) (the )?(current|recent|available|existing|published) (literature|evidence|knowledge|concepts)\b/,/\ba (narrative|literature) review was (conducted|performed|carried out)\b/],
+  P:/^review$/i,D:/^(review|short survey)$/i,notType:/systematic review|meta-analysis|scoping review|case reports?/i},
+ edit:{label:'Editorials, letters and errata',
+  T:[/^(erratum|corrigendum|correction to|correction:|retraction note|retraction:|retracted:|notice of retraction|expression of concern|letter to the editor|editorial(:|\s*\.?\s*$)|comment on|commentary on|reply to|in reply|authors?'? reply|re:)/,/\bletter to the editor\b/,/\b(erratum|corrigendum)\b/],
+  P:/^(editorial|letter|comment|published erratum|retraction of publication|retraction notice|expression of concern|news|newspaper article)$/i,
+  D:/^(editorial|editorial material|letter|note|erratum|correction|correction, addition|retraction|news item|biographical-item|reprint)$/i},
  retro:{label:'Retrospective studies',
   T:[/\bretrospective(ly)?\b/],skipT:/\bprospective(ly)?\b/,
   A:[/\b(this|the present|our|current)\b[^.]{0,60}\bretrospective(ly)?\b/,/\bwe retrospectively\b/,/\bretrospectively (reviewed|analy[sz]ed|evaluated|collected|identified|assessed|examined|included|enrolled)\b/],skipA:/\bprospective(ly)?\b/,
@@ -590,7 +604,9 @@ function classify(r,on){
     if(e.skipAll&&(e.skipAll.test(ti)||e.skipAll.test(ab)))continue;
     const hit=(rs,txt)=>rs.map(x=>txt.match(x)).find(m=>m&&!(e.rej&&e.rej.test(m[0])));
     if(!(e.skipT&&e.skipT.test(ti))){const m=hit(e.T,ti);if(m)return{k,why:'Title: "'+m[0]+'"'}}
-    const p=e.P&&(r.pt||[]).find(x=>e.P.test(x));if(p)return{k,why:'PubMed publication type: '+p};
+    const typ=[...(r.pt||[]),...(r.dt||[])],tOK=!(e.notType&&typ.some(x=>e.notType.test(x)));
+    const p=tOK&&e.P&&(r.pt||[]).find(x=>e.P.test(x.trim()));if(p)return{k,why:'PubMed publication type: '+p};
+    const d=tOK&&e.D&&(r.dt||[]).find(x=>e.D.test(x.trim()));if(d)return{k,why:'Document type (Scopus or Web of Science): '+d};
     if(e.M&&mh.some(x=>e.M.test(x))&&!(e.skipM&&mh.some(x=>e.skipM.test(x))))return{k,why:'MeSH term: Retrospective Studies'};
     if(e.H&&mh.includes('Animals')&&!mh.includes('Humans'))return{k,why:'MeSH term: Animals (without Humans)'};
     if(ab&&e.A&&!(e.skipA&&e.skipA.test(ab))){const m=hit(e.A,ab);if(m)return{k,why:'Abstract: "'+m[0].slice(0,80)+'"'}}

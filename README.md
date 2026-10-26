@@ -62,11 +62,13 @@ Automatic exclusion is off by default and is applied only after duplicates are r
 |---|---|
 | Case reports | Title wording (e.g. "case report", "a case of", "report of two cases"), PubMed publication type, or abstract wording such as "we report a case". Case series are not excluded: a record that mentions a case series, a "series of" cases, a cohort or consecutive patients, or reports more than three cases, is kept |
 | Systematic reviews and meta-analyses | Title wording, PubMed publication type, or abstract wording such as "this meta-analysis". Protocols are not excluded |
+| Narrative reviews | Title wording (e.g. "narrative review", "literature review", "review of the literature", or a title ending in ": a review"), abstract wording such as "in this review", PubMed publication type Review, or the document type Review in Scopus or Web of Science. Records that mention a systematic, scoping or umbrella review, a meta-analysis, a case report or case series, or a protocol are never excluded as narrative reviews, and neither are chart, record or retrospective reviews |
+| Editorials, letters and errata | PubMed publication type (Editorial, Letter, Comment, Published Erratum, Retraction), the document type in Scopus or Web of Science (Editorial, Editorial Material, Letter, Note, Erratum, Correction), or a title such as "Erratum: …", "Correction to: …", "Letter to the editor" or "Reply to: …" |
 | Retrospective studies | "Retrospective" in the title or abstract, or the MeSH term Retrospective Studies. A mention of "prospective" in the same title or abstract prevents a match |
 | In-vitro studies | "In vitro" in the title or abstract (not in-vitro fertilisation or diagnostics). A mention of in-vivo or clinical work in the same title or abstract prevents a match |
 | Animal studies | Animal species or models in the title, named animal strains or procedures in the abstract, or the MeSH term Animals without Humans. A mention of patients or human participants in the same title or abstract prevents a match |
 
-A record is excluded only when its title, abstract or PubMed indexing states the study type explicitly. Nothing is deleted:
+A record is excluded only when its title, abstract or database labels (PubMed publication type and MeSH terms, or the document type in Scopus and Web of Science) state the study type explicitly. Nothing is deleted:
 
 - Every excluded record appears in the **Auto-excluded** tab with the exact evidence (for example *Title: "case report"*).
 - **Keep for screening** restores a record, and the choice is remembered.
@@ -102,7 +104,9 @@ One review is a pilot, not evidence of accuracy. The full results will be report
 - A conference abstract and a full article with the same title, year and first author are treated as duplicates, unless both have DOIs and the DOIs differ, in which case the pair is flagged for you to decide.
 - Matching depends on the metadata in your exports. Records with no DOI and very short or missing titles are harder to match.
 - Registry linking only flags titles that are at least 80% similar, so some registry entries will not be linked to their publication.
-- Automatic exclusion relies on explicit wording in English. Records without an abstract are judged on the title and PubMed indexing only, and studies that do not state their design will not be excluded.
+- PubMed labels some short research reports as Letters, so a research letter is excluded under Editorials, letters and errata. Check that category if your review includes research letters.
+- Scopus and Web of Science label systematic reviews as Review too. Winnow relies on the title or abstract mentioning a systematic review or meta-analysis to keep these out of the Narrative reviews category.
+- Automatic exclusion relies on explicit wording in English. Records without an abstract are judged on the title and database labels only, and studies that do not state their design will not be excluded.
 - Saved sessions live in one browser on one device.
 - Very large files (tens of thousands of records) have not been tested.
 
