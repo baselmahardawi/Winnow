@@ -148,8 +148,8 @@ body{display:flex;flex-direction:column;min-height:100vh}
 </svg>
 </div></header>
 <main>
-<label class="drop" id="drop" tabindex="0"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg><b>Drop files here or click to choose</b><span>RIS, PubMed/MEDLINE (.nbib, .txt), Web of Science (.txt, .ciw) and CSV (Scopus, Cochrane, others)</span>
-<input id="file" type="file" multiple accept=".ris,.nbib,.txt,.csv,.ciw" hidden></label>
+<label class="drop" id="drop" tabindex="0"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg><b>Drop files here or click to choose</b><span>RIS, PubMed/MEDLINE (.nbib, .txt), Web of Science (.txt, .ciw), BibTeX (.bib) and CSV (Scopus, Cochrane, others)</span>
+<input id="file" type="file" multiple accept=".ris,.nbib,.txt,.csv,.ciw,.bib" hidden></label>
 <div class="row"><button id="sample">Load sample data</button><button id="reset">Clear saved session</button><span id="saved" style="font-size:13px;color:var(--mute)"></span><span id="notice" style="font-size:13px;color:var(--flag);font-weight:600"></span></div>
 
 <section class="exbox locked" id="exbox">
@@ -187,7 +187,7 @@ body{display:flex;flex-direction:column;min-height:100vh}
 </div></section>
 <section class="steps"><h2>About Winnow</h2><div class="grid3">
 <div class="step"><h3>How matching works</h3><p>Records are compared on DOI and PMID first, then on title, year and first author. Titles are compared without capitals, accents or punctuation, using character-pair similarity. Only certain matches are removed. Everything else that looks similar is flagged for you.</p></div>
-<div class="step"><h3>What to know</h3><p>Winnow is being validated, so check its results before relying on them. It reads RIS, PubMed (.nbib), Web of Science (plain text, tab-delimited or RIS) and CSV files. Check the Removed tab and the flagged pairs before relying on a result. Trial registry entries are flagged when their title matches a publication. The optional exclusion of study types uses only explicit statements in the title, abstract or database labels, and every excluded record is listed with its evidence so you can restore it.</p></div>
+<div class="step"><h3>What to know</h3><p>Winnow is being validated, so check its results before relying on them. It reads RIS, PubMed (.nbib), Web of Science (plain text, tab-delimited, RIS or BibTeX), BibTeX and CSV files. Check the Removed tab and the flagged pairs before relying on a result. Trial registry entries are flagged when their title matches a publication. The optional exclusion of study types uses only explicit statements in the title, abstract or database labels, and every excluded record is listed with its evidence so you can restore it.</p></div>
 <div class="step"><h3>Privacy and use</h3><p>Your files are read in your browser and never uploaded. The saved session stays in this browser only, so use Clear saved session when you finish a review. Winnow is released under the MIT licence.</p></div>
 </div></section>
 <p class="note">Records are processed in your browser and are not uploaded. Matching order: DOI, PMID, exact normalised title with year and first author, then fuzzy title similarity (bigram Dice). Anything short of a certain match is flagged, never removed silently. Version 1.0.0.</p>
@@ -308,7 +308,57 @@ function wosTab(t,src){
     return r;
   }).filter(o=>o.ti);
 }
+/* ---------- BibTeX (.bib) from Web of Science, Scopus, reference managers ---------- */
+const TEXACC={"'":'́','`':'̀','^':'̂','"':'̈','~':'̃','=':'̄','.':'̇',c:'̧',v:'̌',u:'̆',H:'̋',k:'̨'};
+function texClean(s){
+  return (s||'')
+    .replace(/\\([cvuHk])\s*\{(\w)\}|\\([cvuHk]) (\w)/g,(m,a,b,c,d)=>(b||d)+TEXACC[a||c])
+    .replace(/\\(['`^"~=.])\s*\{?\\?([a-zA-Z])\}?/g,(m,a,b)=>(b==='i'?'i':b)+TEXACC[a])
+    .replace(/\{?\\ss\}?/g,'ß').replace(/\{?\\(o|O)\}?(?![a-z])/g,(m,a)=>a==='o'?'ø':'Ø').replace(/\{?\\(aa|AA)\}?/g,(m,a)=>a==='aa'?'å':'Å').replace(/\{?\\(ae|AE)\}?/g,(m,a)=>a==='ae'?'æ':'Æ')
+    .replace(/``|''/g,'"').replace(/\\([&%_$#])/g,'$1').replace(/\\textendash\b|--/g,'–')
+    .replace(/[{}]/g,'').replace(/\s+/g,' ').trim().normalize('NFC');
+}
+const isBib=(name,t)=>/\.bib$/i.test(name)||/^\s*@\s*(article|book|booklet|inbook|incollection|inproceedings|conference|manual|mastersthesis|misc|phdthesis|proceedings|techreport|unpublished)\s*[{(]/im.test(t.slice(0,5000));
+function bibtex(t,src){
+  const out=[];let i=0;const n=t.length;
+  const skipWs=()=>{while(i<n&&/[\s,]/.test(t[i]))i++};
+  const braced=()=>{let d=0,s=i;do{if(t[i]==='{')d++;else if(t[i]==='}')d--;i++}while(i<n&&d>0);return t.slice(s+1,i-1)};
+  const quoted=()=>{let d=0,s=++i;while(i<n&&!(t[i]==='"'&&d===0&&t[i-1]!=='\\')){if(t[i]==='{')d++;else if(t[i]==='}')d--;i++}const v=t.slice(s,i);i++;return v};
+  while((i=t.indexOf('@',i))>=0){
+    const m=/^@\s*([a-zA-Z]+)\s*([{(])/.exec(t.slice(i,i+60));
+    if(!m){i++;continue}
+    const type=m[1].toLowerCase();i+=m[0].length-1;
+    if(type==='comment'||type==='preamble'||type==='string'){if(t[i]==='{')braced();else i++;continue}
+    i++;const kc=t.indexOf(',',i);if(kc<0)break;i=kc+1;
+    const f={};
+    while(i<n){
+      skipWs();if(t[i]==='}'||t[i]===')'){i++;break}
+      const nm=/^[A-Za-z0-9_\-:.]+/.exec(t.slice(i,i+80));if(!nm){i++;continue}
+      i+=nm[0].length;while(i<n&&/\s/.test(t[i]))i++;
+      if(t[i]!=='='){continue}
+      i++;let parts=[];
+      for(;;){
+        while(i<n&&/\s/.test(t[i]))i++;
+        if(t[i]==='{')parts.push(braced());else if(t[i]==='"')parts.push(quoted());
+        else{const b=/^[^,}#\s]+/.exec(t.slice(i,i+200));parts.push(b?b[0]:'');i+=b?b[0].length:1}
+        while(i<n&&/\s/.test(t[i]))i++;
+        if(t[i]==='#'){i++;continue}break;
+      }
+      f[nm[0].toLowerCase()]=parts.join('');
+    }
+    const g=k=>texClean(f[k]);
+    const r={src,au:(f.author?texClean(f.author.replace(/\s+/g,' ')).split(/\s+and\s+/):[]).filter(Boolean)};
+    r.ti=g('title');r.ab=g('abstract');r.jo=g('journal')||g('booktitle');r.yr=(g('year').match(/\d{4}/)||[])[0];
+    r.vo=g('volume');r.is=g('number');
+    const pg=g('pages').split(/\s*[–-]+\s*/);r.sp=(pg[0]||'').replace(/\+$/,'');r.ep=pg[1]||'';
+    r.doi=g('doi').replace(/^https?:\/\/(dx\.)?doi\.org\//i,'');r.pmid=g('pubmed-id')||g('pmid');
+    const dt=g('type')||g('document_type')||g('document-type');if(dt)r.dt=dt.split(';').map(x=>x.trim()).filter(Boolean);
+    if(r.ti)out.push(r);
+  }
+  return out;
+}
 function parseAny(name,text,src){
+  if(isBib(name,text))return bibtex(text,src);
   if(isWosTagged(text))return wosTagged(text,src);
   if(isWosTab(text))return wosTab(text,src);
   const isCsv=/\.csv$/i.test(name)||(!/^[A-Z][A-Z0-9]{1,3}\s{0,2}-/m.test(text)&&text.includes(','));
@@ -336,10 +386,13 @@ function judge(a,b){
   if(a.pmid&&a.pmid===b.pmid)return{t:'auto',why:'Same PMID'};
   const reg=r=>/^(NCT\d|CTRI|ISRCTN|ChiCTR|IRCT|ACTRN|DRKS|UMIN|JPRN|EUCTR|NTR|TCTR)/i.test(r.au[0]||'');
   if(reg(a)!==reg(b)&&sim>=.8)return{t:'flag',why:'Trial registry record and publication with the same or similar title ('+pc+'): check whether they report the same trial'};
-  if(sim>=.97&&a.d&&b.d)return{t:'flag',why:'Identical title but different DOIs (preprint, version or erratum?)'};
-  if(sim>=.97&&yd===0&&(au||!a.s||!b.s))return{t:'auto',why:'Identical title, year and first author'};
-  if(sim>=.97)return{t:'flag',why:'Identical title; '+(yd?'year differs by '+yd:'first author differs')};
-  if(sim>=.9&&yd===0&&au)return{t:'auto',why:'Near-identical title ('+pc+'), same year and first author'};
+  const corr=r=>/\b(erratum|corrigendum|correction notice|correction to)\b|^correction\b|\(vol\.? [\w-]+, pg\.? [\w-]+,? \d{4}\)\s*\.?$|\((jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?,? 10\.\d{4,}\/\S+,? \d{4}\)\s*\.?$/i.test(r.ti||'');
+  if(sim>=.8&&(corr(a)||corr(b)))return{t:'flag',why:'One record looks like a correction notice ('+pc+' similar title): check before removing'};
+  if(sim>=.9&&a.d&&b.d)return{t:'flag',why:(sim>=.97?'Identical':'Near-identical')+' title but different DOIs (preprint, version or erratum?)'};
+  const yk=!!(a.yr&&b.yr&&yd===0);
+  if(sim>=.97&&yk&&au)return{t:'auto',why:'Identical title, year and first author'};
+  if(sim>=.97)return{t:'flag',why:'Identical title; '+(yd?'year differs by '+yd:!(a.yr&&b.yr)?'year missing in one record':!(a.s&&b.s)?'first author missing in one record':'first author differs')};
+  if(sim>=.9&&yk&&au)return{t:'auto',why:'Near-identical title ('+pc+'), same year and first author'};
   if(sim>=.8&&yd<=1&&(au||pg))return{t:'flag',why:'Similar title ('+pc+'), '+(au?'same first author':'same start page')};
   return{t:null};
 }
@@ -379,13 +432,15 @@ function fhash(t){let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt
 function ingest(name,text){
   const fk=name+'|'+text.length+'|'+fhash(text);
   if(seen.has(fk))return false;
-  seen.add(fk);
   const fb=name.replace(/\.[^.]+$/,''),dbn=guessDb(name,text),src=dbn||fb;
-  if(!dbn)unrec.add(fb);
   const raw=parseAny(name,text,src);
+  if(!raw.length)return 0;
+  seen.add(fk);
+  if(!dbn)unrec.add(fb);
   rawAll.push(...raw.map(r=>structuredClone(r)));
   const recs=raw.map(prep);
   per[src]=(per[src]||0)+recs.length;all.push(...recs);
+  return recs.length;
 }
 function refresh(){
   if(!all.length)return;
@@ -474,10 +529,10 @@ async function restore(){
 
 /* ---------- database name detection ---------- */
 const DBS=[
- ['Scopus',/scopus/i,/scopus\.com|^DB {2}- *Scopus/im],
+ ['Scopus',/scopus/i,/scopus\.com|^DB {2}- *Scopus|source\s*=\s*\{Scopus\}/im],
  ['PubMed',/pubmed|medline/i,/pubmed\.ncbi|ncbi\.nlm\.nih\.gov\/pubmed|^DB {2}- *(PubMed|MEDLINE)/im],
  ['Embase',/embase/i,/embase\.com|^DB {2}- *Embase/im],
- ['Web of Science',/web[ _-]?of[ _-]?science|savedrecs|\bwos\b|\.ciw$/i,/webofscience|webofknowledge|isiknowledge|^DB {2}- *Web of Science|^FN (Clarivate|Thomson)|^UT WOS:|^AN {2}- WOS:|^PT\tAU\t/im],
+ ['Web of Science',/web[ _-]?of[ _-]?science|savedrecs|\bwos\b|\.ciw$/i,/webofscience|webofknowledge|isiknowledge|^DB {2}- *Web of Science|^FN (Clarivate|Thomson)|^UT WOS:|^AN {2}- WOS:|^PT\tAU\t|Unique-ID\s*=\s*\{WOS:/im],
  ['Cochrane Library',/cochrane|\bcentral\b/i,/cochranelibrary|^DB {2}- *Cochrane/im],
  ['Dentistry & Oral Sciences Source',/dentistry|oral[ _-]?sciences?|dossrc/i,/^DB {2}- *Dentistry|Dentistry (&|and|&amp;) Oral Sciences?/im],
  ['CINAHL',/cinahl/i,/cinahl/i],['PsycINFO',/psyc ?info/i,/psycinfo/i],['LILACS',/lilacs/i,/lilacs/i],
@@ -581,7 +636,7 @@ const EX={
   A:[/\bin this (narrative |literature |critical |comprehensive )?review\b/,/\b(this|the present|our|current) (narrative |literature |critical |comprehensive )?review (aims|summari[sz]es|discusses|describes|provides|highlights|focuses|examines|explores|outlines|presents|covers|addresses|updates)\b/,/\bthis (article|paper|chapter) reviews\b/,/\bwe (review|summari[sz]e|discuss) (the )?(current|recent|available|existing|published) (literature|evidence|knowledge|concepts)\b/,/\ba (narrative|literature) review was (conducted|performed|carried out)\b/],
   P:/^review$/i,D:/^(review|short survey)$/i,notType:/systematic review|meta-analysis|scoping review|case reports?/i},
  edit:{label:'Editorials, letters and errata',
-  T:[/^(erratum|corrigendum|correction to|correction:|retraction note|retraction:|retracted:|notice of retraction|expression of concern|letter to the editor|editorial(:|\s*\.?\s*$)|comment on|commentary on|reply to|in reply|authors?'? reply|re:)/,/\bletter to the editor\b/,/\b(erratum|corrigendum)\b/],
+  T:[/^(erratum|corrigendum|correction to|correction:|retraction note|retraction:|retracted:|notice of retraction|expression of concern|letter to the editor|editorial(:|\s*\.?\s*$)|comment on|commentary on|reply to|in reply|authors?'? reply|re:)/,/\bletter to the editor\b/,/\b(erratum|corrigendum)\b/,/\(vol\.? [\w-]+, pg\.? [\w-]+,? \d{4}\)\s*\.?$/,/\((jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?,? 10\.\d{4,}\/\S+,? \d{4}\)\s*\.?$/],
   P:/^(editorial|letter|comment|published erratum|retraction of publication|retraction notice|expression of concern|news|newspaper article)$/i,
   D:/^(editorial|editorial material|letter|note|erratum|correction|correction, addition|retraction|news item|biographical-item|reprint)$/i},
  retro:{label:'Retrospective studies',
@@ -640,10 +695,10 @@ $('#xex').onclick=()=>dl('auto-excluded.csv',[['Category','Evidence','Title','Au
 
 /* ---------- events ---------- */
 async function addFiles(fl){
-  const sk=[];
-  for(const f of fl){if(ingest(f.name,await readText(f))===false)sk.push(f.name)}
+  const sk=[],bad=[];
+  for(const f of fl){const n=ingest(f.name,await readText(f));if(n===false)sk.push(f.name);else if(n===0)bad.push(f.name)}
   refresh();
-  $('#notice').textContent=sk.length?'Already loaded, so skipped: '+sk.join(', '):'';
+  $('#notice').textContent=[sk.length?'Already loaded, so skipped: '+sk.join(', ')+'.':'',bad.length?'No records could be read from: '+bad.join(', ')+'. Check that it is a RIS, PubMed, Web of Science, BibTeX or CSV export.':''].filter(Boolean).join(' ');
 }
 $('#file').onchange=e=>{const fl=[...e.target.files];e.target.value='';addFiles(fl)};
 const dz=$('#drop');

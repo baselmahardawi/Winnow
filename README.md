@@ -29,9 +29,12 @@ Winnow runs entirely in your browser. Your files are read locally and are **neve
 | RIS (`.ris`) | Cochrane, Scopus, Web of Science, Embase*, reference managers |
 | PubMed/MEDLINE (`.nbib`, `.txt`) | PubMed |
 | Web of Science plain text (`.txt`, `.ciw`) or tab-delimited (`.txt`, UTF-8 or UTF-16) | Web of Science |
+| BibTeX (`.bib`) | Web of Science, Scopus, reference managers |
 | CSV (`.csv`) with columns such as Title, Authors, Year, Source title, Volume, Issue, Page start/end, DOI, PubMed ID, Abstract | Scopus and others |
 
-\*RIS from Embase may work but has not been tested. BibTeX and EndNote XML are not supported yet.
+\*RIS from Embase may work but has not been tested. EndNote XML is not supported yet.
+
+For automatic exclusion, export the **full record** (including abstracts and document type) where the database offers it. Web of Science's default "Author, Title, Source" export leaves out the abstract and document type, so those records are judged on the title only.
 
 ## How matching works
 
@@ -43,14 +46,17 @@ Titles are normalised (lower case, accents and punctuation removed) and compared
 | Same DOI but titles differ | Flag |
 | Same PMID | Remove automatically |
 | Trial registry record and a publication with title at least 80% similar | Flag |
-| Title at least 97% similar, but different DOIs | Flag |
+| One record looks like a correction notice (erratum, corrigendum, or a Web of Science title ending in "(vol …, pg …, year)") and titles are at least 80% similar | Flag |
+| Title at least 90% similar, but different DOIs | Flag |
 | Title at least 97% similar, same year, same first author | Remove automatically |
-| Title at least 97% similar, year or author differs | Flag |
+| Title at least 97% similar, but year or first author differs, or is missing from one record | Flag |
 | Title at least 90% similar, same year, same first author | Remove automatically |
 | Title at least 80% similar, year within one, same first author or start page | Flag |
 | Anything else | Treated as different records |
 
 When a duplicate is removed, missing fields in the kept record are filled from the removed one, PubMed publication types and MeSH terms are carried over (so automatic exclusion gives the same result whatever order the files are added in), and every source is listed in the exports. A flagged pair keeps both records until you decide.
+
+Automatic removal on title similarity always needs the year and the first author to be present in both records and to match. Otherwise the pair is flagged.
 
 These thresholds are starting values and are still being validated. Do not treat them as final.
 
@@ -63,7 +69,7 @@ Automatic exclusion is off by default and is applied only after duplicates are r
 | Case reports | Title wording (e.g. "case report", "a case of", "report of two cases"), PubMed publication type, or abstract wording such as "we report a case". Case series are not excluded: a record that mentions a case series, a "series of" cases, a cohort or consecutive patients, or reports more than three cases, is kept |
 | Systematic reviews and meta-analyses | Title wording, PubMed publication type, or abstract wording such as "this meta-analysis". Protocols are not excluded |
 | Narrative reviews | Title wording (e.g. "narrative review", "literature review", "review of the literature", or a title ending in ": a review"), abstract wording such as "in this review", PubMed publication type Review, or the document type Review in Scopus or Web of Science. Records that mention a systematic, scoping or umbrella review, a meta-analysis, a case report or case series, or a protocol are never excluded as narrative reviews, and neither are chart, record or retrospective reviews |
-| Editorials, letters and errata | PubMed publication type (Editorial, Letter, Comment, Published Erratum, Retraction), the document type in Scopus or Web of Science (Editorial, Editorial Material, Letter, Note, Erratum, Correction), or a title such as "Erratum: …", "Correction to: …", "Letter to the editor" or "Reply to: …" |
+| Editorials, letters and errata | PubMed publication type (Editorial, Letter, Comment, Published Erratum, Retraction), the document type in Scopus or Web of Science (Editorial, Editorial Material, Letter, Note, Erratum, Correction), or a title such as "Erratum: …", "Correction to: …", "Letter to the editor" or "Reply to: …". Web of Science correction notices, whose titles end in "(vol …, pg …, year)" or "(month, DOI, year)", are also caught |
 | Retrospective studies | "Retrospective" in the title or abstract, or the MeSH term Retrospective Studies. A mention of "prospective" in the same title or abstract prevents a match |
 | In-vitro studies | "In vitro" in the title or abstract (not in-vitro fertilisation or diagnostics). A mention of in-vivo or clinical work in the same title or abstract prevents a match |
 | Animal studies | Animal species or models in the title, named animal strains or procedures in the abstract, or the MeSH term Animals without Humans. A mention of patients or human participants in the same title or abstract prevents a match |
