@@ -55,6 +55,7 @@ table{border-collapse:collapse;width:100%;min-width:560px;font-size:14px}
 th,td{text-align:left;vertical-align:top;padding:5px 8px;border-top:1px solid var(--line)}
 th{color:var(--mute);font-weight:600;width:90px}
 tr.diff td{background:var(--flagbg)}
+tr.diff mark{background:rgba(232,160,50,.38);color:inherit;border-radius:2px;padding:0 1px}
 td a{color:var(--acc)}
 .item{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:9px 12px;margin:8px 0;font-size:14px}
 .item small{color:var(--mute);display:block}
@@ -466,6 +467,16 @@ function draw(){
   $('#tabs').innerHTML=T.map(t=>'<button role="tab" data-t="'+t[0]+'" aria-selected="'+(tab===t[0])+'">'+t[1]+'</button>').join('');
   $('#view').innerHTML=tab==='rev'?viewRev():tab==='rem'?viewRem():tab==='exc'?viewEx():f.map(r=>'<div class="item">'+cite(r)+'<small>'+esc(r.srcs.join(', '))+(r.doi?' · '+esc(r.doi):'')+'</small></div>').join('');
 }
+function wdiff(a,b){
+  const A=a.split(/\s+/).filter(Boolean),B=b.split(/\s+/).filter(Boolean),k=t=>nz(t)||t.toLowerCase();
+  const n=A.length,m=B.length,L=Array.from({length:n+1},()=>new Array(m+1).fill(0));
+  for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)L[i][j]=k(A[i])===k(B[j])?L[i+1][j+1]+1:Math.max(L[i+1][j],L[i][j+1]);
+  const ma=new Array(n).fill(true),mb=new Array(m).fill(true);
+  let i=0,j=0;
+  while(i<n&&j<m){if(k(A[i])===k(B[j])){ma[i]=mb[j]=false;i++;j++}else if(L[i+1][j]>=L[i][j+1])i++;else j++}
+  const out=(T,f)=>T.map((w,x)=>f[x]?'<mark>'+esc(w)+'</mark>':esc(w)).join(' ');
+  return[out(A,ma),out(B,mb)];
+}
 function viewRev(){
   if(!pairs.length)return'<p class="sub">No doubtful pairs. Every duplicate was a certain match.</p>';
   const F=[['Title',r=>r.ti],['Authors',r=>r.au.slice(0,3).join('; ')+(r.au.length>3?' …':'')],['Year',r=>r.yr],['Journal',r=>r.jo],['Vol/Issue',r=>(r.vo||'')+(r.is?'('+r.is+')':'')],['Pages',r=>(r.sp||'')+(r.ep?'–'+r.ep:'')],['DOI',r=>r.doi],['PMID',r=>r.pmid]];
@@ -473,7 +484,8 @@ function viewRev(){
     const rows=F.map(([n,fn])=>{
       const a=fn(p.a)||'',b=fn(p.b)||'',d=nz(a)!==nz(b);
       const show=(v,r)=>n==='DOI'&&v?'<a href="https://doi.org/'+encodeURI(nd(v))+'" target="_blank" rel="noopener">'+esc(v)+'</a>':n==='PMID'&&v?'<a href="https://pubmed.ncbi.nlm.nih.gov/'+encodeURI(v)+'/" target="_blank" rel="noopener">'+esc(v)+'</a>':esc(v)||'—';
-      return'<tr class="'+(d?'diff':'')+'"><th>'+n+'</th><td>'+show(a)+'</td><td>'+show(b)+'</td></tr>';
+      let sa=show(a),sb=show(b);if(d&&a&&b&&(n==='Title'||n==='Authors'||n==='Journal'))[sa,sb]=wdiff(a,b);
+      return'<tr class="'+(d?'diff':'')+'"><th>'+n+'</th><td>'+sa+'</td><td>'+sb+'</td></tr>';
     }).join('');
     return'<div class="pair '+(p.dec?'done '+p.dec:'')+'"><span class="why">'+esc(p.why)+'</span><table><tr><th></th><th>A: '+esc(p.a.srcs.join(', '))+'</th><th>B: '+esc(p.b.src)+'</th></tr>'+rows+'</table><div class="row">'
     +'<button class="'+(p.dec==='merge'?'sel-merge':p.dec?'dim':'p')+'" data-d="merge" data-i="'+i+'">'+(p.dec==='merge'?'\u2713 ':'')+'Same paper: remove B</button><button class="'+(p.dec==='keep'?'sel-keep':p.dec?'dim':'')+'" data-d="keep" data-i="'+i+'">'+(p.dec==='keep'?'\u2713 ':'')+'Different papers: keep both</button>'
