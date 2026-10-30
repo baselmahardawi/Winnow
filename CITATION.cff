@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use Winnow, please cite it as below."
+title: "Winnow: browser-based duplicate removal and pre-screening for systematic reviews"
+version: 1.1.0
+date-released: 2026-10-30
+license: MIT
+url: "https://winnowsr.com"
+authors:
+  - family-names: "Mahardawi"
+    given-names: "Basel"
+    affiliation: "Department of Oral and Maxillofacial Surgery, Faculty of Dentistry Chulalongkorn University"
