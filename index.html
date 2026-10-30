@@ -404,7 +404,9 @@ function judge(a,b){
   if(sim>=.8&&yd<=1&&(au||pg))return{t:'flag',why:'Similar title ('+pc+'), '+(au?'same first author':'same start page')};
   return{t:null};
 }
+const labOf=r=>[...(r.pt||[]).map(v=>({s:r.src,k:'pt',v})),...(r.dt||[]).map(v=>({s:r.src,k:'dt',v}))];
 function merge(c,r){
+  c.lab=[...(c.lab||labOf(c)),...labOf(r)];
   for(const k of['ti','ab','jo','vo','is','sp','ep','yr','doi','pmid'])if(!c[k]&&r[k])c[k]=r[k];
   if(!c.au.length)c.au=r.au;
   for(const k of['pt','mh','dt'])if(r[k]&&r[k].length)c[k]=[...new Set([...(c[k]||[]),...r[k]])];
@@ -618,7 +620,7 @@ function prismaDocx(){
   const tbl='<w:tbl><w:tblPr><w:tblW w:w="9060" w:type="dxa"/><w:jc w:val="center"/><w:tblLayout w:type="fixed"/></w:tblPr>'+grid+rows+'</w:tbl>';
   const day=new Date().toISOString().slice(0,10);
   const body=p('PRISMA 2020 flow diagram',true,'left',32)
-   +p('Identification and deduplication counts were filled in by Winnow (version 1.1.0) on '+day+'. Empty fields are to be completed after screening.',false,'left',18,true)
+   +p('Identification and deduplication counts were filled in by Winnow (version 1.2.0) on '+day+'. Empty fields are to be completed after screening.',false,'left',18,true)
    +tbl
    +p('',false)
    +p('From: Page MJ, McKenzie JE, Bossuyt PM, et al. The PRISMA 2020 statement: an updated guideline for reporting systematic reviews. BMJ 2021;372:n71. doi: 10.1136/bmj.n71. For more information, visit: http://www.prisma-statement.org/',false,'left',16,true);
@@ -654,7 +656,7 @@ const EX={
   skipAll:/\bsystematic(ally)? (review|literature|search)|\bmeta[- ]?analys[ie]s\b|\bscoping review\b|\bumbrella review\b|\boverview of (systematic )?reviews\b|\brapid review\b|\bcase reports?\b|\bcase series\b|\bcase presentation\b|\bstudy protocol\b|\bprotocol for\b/,
   skipT:/\b(retrospective|chart|charts|record|records|registry|database|cohort|clinical|peer|file|case[- ]note) review\b|\breview of (\d+|[\w-]+ )?(patients|cases|charts|records|medical records|implants)\b/,
   A:[/\bin this (narrative |literature |critical |comprehensive )?review\b/,/\b(this|the present|our|current) (narrative |literature |critical |comprehensive )?review (aims|summari[sz]es|discusses|describes|provides|highlights|focuses|examines|explores|outlines|presents|covers|addresses|updates)\b/,/\bthis (article|paper|chapter) reviews\b/,/\bwe (review|summari[sz]e|discuss) (the )?(current|recent|available|existing|published) (literature|evidence|knowledge|concepts)\b/,/\ba (narrative|literature) review was (conducted|performed|carried out)\b/],
-  P:/^review$/i,D:/^(review|short survey)$/i,notType:/systematic review|meta-analysis|scoping review|case reports?/i},
+  P:/^review$/i,D:/^(review|short survey)$/i,weakD:true,notType:/systematic review|meta-analysis|scoping review|case reports?|comment|editorial|letter/i},
  edit:{label:'Editorials, letters and errata',
   T:[/^(erratum|corrigendum|correction to|correction:|retraction note|retraction:|retracted:|notice of retraction|expression of concern|letter to the editor|editorial(:|\s*\.?\s*$)|comment on|commentary on|reply to|in reply|authors?'? reply|re:)/,/\bletter to the editor\b/,/\b(erratum|corrigendum)\b/,/\(vol\.? [\w-]+, pg\.? [\w-]+,? \d{4}\)\s*\.?$/,/\((jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?,? 10\.\d{4,}\/\S+,? \d{4}\)\s*\.?$/],
   P:/^(editorial|letter|comment|published erratum|retraction of publication|retraction notice|expression of concern|news|newspaper article)$/i,
@@ -662,7 +664,7 @@ const EX={
  retro:{label:'Retrospective studies',
   T:[/\bretrospective(ly)?\b/],skipT:/\bprospective(ly)?\b/,
   A:[/\b(this|the present|our|current)\b[^.]{0,60}\bretrospective(ly)?\b/,/\bwe retrospectively\b/,/\bretrospectively (reviewed|analy[sz]ed|evaluated|collected|identified|assessed|examined|included|enrolled)\b/],skipA:/\bprospective(ly)?\b/,
-  M:/^retrospective studies$/i,skipM:/^prospective studies$/i},
+  trialGuard:true,M:/^retrospective studies$/i,skipM:/^prospective studies$/i},
  vitro:{label:'In-vitro studies',
   T:[/\bin[- ]vitro\b(?!\s+(fertili[sz]ation|diagnostic))/],skipT:/\bin[- ]vivo\b|\bclinical (trial|outcomes?)\b/,
   A:[/\b(this|the present|our|current) in[- ]vitro\b/,/\b(this|the present|our|current) (study|work|investigation)\b[^.]{0,80}\bin[- ]vitro\b/],skipA:/\bin[- ]vivo\b/},
@@ -672,19 +674,31 @@ const EX={
   A:[/\b(wistar|sprague[- ]dawley|new zealand white|c57bl|balb\/c|beagle|minipig|macaque)\b/,/\b(rats|mice|rabbits|dogs|pigs|sheep|goats|monkeys) were (used|divided|randomly|anesthetized|anaesthetized|sacrificed|euthani[sz]ed|assigned|implanted)\b/],
   skipA:/\b(patients|participants|volunteers) (were|was)\b/,H:true}
 };
+const MIXPT=/trial|randomi[sz]ed|observational|comparative study|cohort|case-control|multicenter|evaluation study/i;
+const RCTRX=/\brandomi[sz]ed (controlled |clinical )?(trial|study)\b|\bclinical trial\b|\brct\b/,
+ REVTI=/\b(review|meta[- ]?analys[ie]s|overview)\b/,
+ REVAB=/\b(this|the present|our|current) (systematic |narrative |literature )?(review|meta[- ]?analys[ie]s)\b|\bdatabases? (were|was) searched\b|\bwe (searched|reviewed)\b/;
 function classify(r,on){
-  const ti=(r.ti||'').toLowerCase(),ab=(r.ab||'').toLowerCase(),mh=r.mh||[];
+  const strip=x=>x.replace(/\bretrospective(ly)?[ -]+(trial[ -]+)?regist\w*|\bregist(ered|ration)\s+(\w+\s+){0,2}retrospectively\b/g,' ');
+  const ti=strip((r.ti||'').toLowerCase()),ab=strip((r.ab||'').toLowerCase()),mh=r.mh||[];
+  /* a record that describes itself as a trial is never excluded on a database label, MeSH term or abstract wording alone */
+  const trial=(RCTRX.test(ti)||RCTRX.test(ab))&&!REVTI.test(ti)&&!REVAB.test(ab);
   for(const k of on){
     const e=EX[k];
     if(e.skipAll&&(e.skipAll.test(ti)||e.skipAll.test(ab)))continue;
     const hit=(rs,txt)=>rs.map(x=>txt.match(x)).find(m=>m&&!(e.rej&&e.rej.test(m[0])));
     if(!(e.skipT&&e.skipT.test(ti))){const m=hit(e.T,ti);if(m)return{k,why:'Title: "'+m[0]+'"'}}
     const typ=[...(r.pt||[]),...(r.dt||[])],tOK=!(e.notType&&typ.some(x=>e.notType.test(x)));
-    const p=tOK&&e.P&&(r.pt||[]).find(x=>e.P.test(x.trim()));if(p)return{k,why:'PubMed publication type: '+p};
-    const d=tOK&&e.D&&(r.dt||[]).find(x=>e.D.test(x.trim()));if(d)return{k,why:'Document type (Scopus or Web of Science): '+d};
-    if(e.M&&mh.some(x=>e.M.test(x))&&!(e.skipM&&mh.some(x=>e.skipM.test(x))))return{k,why:'MeSH term: Retrospective Studies'};
+    const p=tOK&&!trial&&e.P&&(r.pt||[]).find(x=>e.P.test(x.trim()));if(p)return{k,why:'PubMed publication type: '+p};
+    const L=r.lab||labOf(r),dm=tOK&&!trial&&e.D?L.filter(x=>x.k==='dt'&&e.D.test(x.v.trim())):[];
+    if(dm.length){
+      const srcs=[...new Set(dm.map(x=>x.s))],mixed=L.some(x=>(x.k==='dt'&&/^article$/i.test(x.v.trim()))||(x.k==='pt'&&MIXPT.test(x.v)));
+      /* a Scopus or Web of Science "Review" label is broad (it includes commentaries), so it counts only when a second database agrees and none disagrees */
+      if(!e.weakD||(srcs.length>1&&!mixed))return{k,why:'Document type '+dm[0].v+' ('+srcs.join(' and ')+')'};
+    }
+    if(e.M&&!trial&&mh.some(x=>e.M.test(x))&&!(e.skipM&&mh.some(x=>e.skipM.test(x))))return{k,why:'MeSH term: Retrospective Studies'};
     if(e.H&&mh.includes('Animals')&&!mh.includes('Humans'))return{k,why:'MeSH term: Animals (without Humans)'};
-    if(ab&&e.A&&!(e.skipA&&e.skipA.test(ab))){const m=hit(e.A,ab);if(m)return{k,why:'Abstract: "'+m[0].slice(0,80)+'"'}}
+    if(ab&&e.A&&!(e.trialGuard&&trial)&&!(e.skipA&&e.skipA.test(ab))){const m=hit(e.A,ab);if(m)return{k,why:'Abstract: "'+m[0].slice(0,80)+'"'}}
   }
   return null;
 }
