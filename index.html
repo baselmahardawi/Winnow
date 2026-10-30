@@ -422,7 +422,7 @@ function run(recs){
     for(const c of cand){
       const j=judge(c,r);
       if(j.t==='auto'){hit={c,j};break}
-      if(j.t==='flag'&&!flag)flag={c,j};
+      if(j.t==='flag'){const sc=/^Trial registry record is cited/.test(j.why)?2:(c.t&&r.t?dice(c.g,r.g):0);if(!flag||sc>flag.sc)flag={c,j,sc}}
     }
     if(hit){merge(hit.c,r);removed.push({r,of:hit.c,why:hit.j.why});continue}
     if(flag){const sw=rich(r)>rich(flag.c);pairs.push({a:sw?r:flag.c,b:sw?flag.c:r,why:flag.j.why,dec:null})}
