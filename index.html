@@ -230,9 +230,10 @@ function tagged(t,src){
       const k=m[1],v=m[2].trim();
       if(k==='TY'||k==='PMID'){if(r)out.push(r);r={src,au:[]}}
       if(!r)continue;
+      const ids=v.match(RGX);if(ids)(r.rg=r.rg||[]).push(...ids);
       last=k;add(r,k,v,false);
       if(k==='ER'){out.push(r);r=null}
-    }else if(r&&last&&/^\s+\S/.test(line))add(r,last,line.trim(),true);
+    }else if(r&&last&&/^\s+\S/.test(line)){const ids=line.match(RGX);if(ids)(r.rg=r.rg||[]).push(...ids);add(r,last,line.trim(),true)}
   }
   if(r)out.push(r);
   return out;
@@ -377,7 +378,12 @@ const nz=s=>(s||'').toLowerCase().normalize('NFD').replace(/\p{M}/gu,'').replace
 const nd=d=>(d||'').toLowerCase().replace(/^https?:\/\/(dx\.)?doi\.org\//,'').replace(/^doi:\s*/,'').trim();
 function bg(s){const a=s.replace(/ /g,''),m=new Map();for(let i=0;i<a.length-1;i++){const g=a.slice(i,i+2);m.set(g,(m.get(g)||0)+1)}return m}
 function dice(a,b){let x=0,ta=0,tb=0;for(const v of a.values())ta+=v;for(const v of b.values())tb+=v;for(const[g,v]of a)if(b.has(g))x+=Math.min(v,b.get(g));return 2*x/(ta+tb||1)}
-function prep(r){r.t=nz(r.ti);r.d=nd(r.doi);r.s=nz((r.au[0]||'').split(/[,;]/)[0]).split(' ')[0]||'';r.g=bg(r.t);r.srcs=[r.src];return r}
+const RGX=/\b(?:NCT\d{8}|ISRCTN\d{8}|ChiCTR-?[A-Z0-9-]*\d{6,}|IRCT\d+N\d+|ACTRN\d{14}|DRKS\d{8}|UMIN\d{9}|JPRN-[A-Za-z0-9]+|CTRI\/\d{4}\/\d+\/\d+|EUCTR\d{4}-\d{6}-\d{2}|NTR\d+|TCTR\d{11})\b/gi;
+const rnorm=x=>String(x).toUpperCase().replace(/[^A-Z0-9]/g,'');
+const REGAU=/^(NCT\d|CTRI|ISRCTN|ChiCTR|IRCT|ACTRN|DRKS|UMIN|JPRN|EUCTR|NTR|TCTR)/i;
+function prep(r){
+  r.rid=REGAU.test(r.au[0]||'')?rnorm(((r.au[0]||'').match(RGX)||[r.au[0]])[0]):'';
+  r.rs=new Set([...(r.rg||[]),...(((r.ab||'')+' '+(r.ti||'')).match(RGX)||[])].map(rnorm));if(r.rid)r.rs.delete(r.rid);r.t=nz(r.ti);r.d=nd(r.doi);r.s=nz((r.au[0]||'').split(/[,;]/)[0]).split(' ')[0]||'';r.g=bg(r.t);r.srcs=[r.src];return r}
 function judge(a,b){
   const sim=!a.t||!b.t?0:(a.t===b.t?1:dice(a.g,b.g));
   const yd=a.yr&&b.yr?Math.abs(a.yr-b.yr):0;
@@ -386,6 +392,7 @@ function judge(a,b){
   if(a.d&&a.d===b.d)return sim>=.6?{t:'auto',why:'Same DOI'}:{t:'flag',why:'Same DOI but titles differ ('+pc+' similar)'};
   if(a.pmid&&a.pmid===b.pmid)return{t:'auto',why:'Same PMID'};
   const reg=r=>/^(NCT\d|CTRI|ISRCTN|ChiCTR|IRCT|ACTRN|DRKS|UMIN|JPRN|EUCTR|NTR|TCTR)/i.test(r.au[0]||'');
+  if((a.rid&&!b.rid&&b.rs.has(a.rid))||(b.rid&&!a.rid&&a.rs.has(b.rid)))return{t:'flag',why:'Trial registry record is cited in the other record\'s text (registration number '+(a.rid||b.rid)+'): check whether they report the same trial'};
   if(reg(a)!==reg(b)&&sim>=.8)return{t:'flag',why:'Trial registry record and publication with the same or similar title ('+pc+'): check whether they report the same trial'};
   const corr=r=>/\b(erratum|corrigendum|correction notice|correction to)\b|^correction\b|\(vol\.? [\w-]+, pg\.? [\w-]+,? \d{4}\)\s*\.?$|\((jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?,? 10\.\d{4,}\/\S+,? \d{4}\)\s*\.?$/i.test(r.ti||'');
   if(sim>=.8&&(corr(a)||corr(b)))return{t:'flag',why:'One record looks like a correction notice ('+pc+' similar title): check before removing'};
@@ -403,10 +410,11 @@ function merge(c,r){
   for(const k of['pt','mh','dt'])if(r[k]&&r[k].length)c[k]=[...new Set([...(c[k]||[]),...r[k]])];
   c.d=nd(c.doi);c.srcs=[...new Set([...c.srcs,r.src])];
 }
+const rich=r=>(r.rid?-100:0)+(r.doi?2:0)+(r.pmid?2:0)+(r.ab?2:0)+(r.jo?1:0)+(r.au.length>1?1:0)+(r.vo||r.sp?1:0);
 function run(recs){
   kept=[];pairs=[];removed=[];
   const idx=new Map();
-  const keys=r=>[r.d&&'d:'+r.d,r.pmid&&'p:'+r.pmid,'t:'+r.t.slice(0,30),'e:'+r.t.slice(-25),r.s&&'s:'+r.s+r.yr].filter(Boolean);
+  const keys=r=>[r.d&&'d:'+r.d,r.pmid&&'p:'+r.pmid,'t:'+r.t.slice(0,30),'e:'+r.t.slice(-25),r.s&&'s:'+r.s+r.yr,r.rid&&'n:'+r.rid,...[...(r.rs||[])].map(x=>'n:'+x)].filter(Boolean);
   for(const r of recs){
     const cand=new Set();
     keys(r).forEach(k=>(idx.get(k)||[]).forEach(x=>cand.add(x)));
@@ -417,7 +425,7 @@ function run(recs){
       if(j.t==='flag'&&!flag)flag={c,j};
     }
     if(hit){merge(hit.c,r);removed.push({r,of:hit.c,why:hit.j.why});continue}
-    if(flag)pairs.push({a:flag.c,b:r,why:flag.j.why,dec:null});
+    if(flag){const sw=rich(r)>rich(flag.c);pairs.push({a:sw?r:flag.c,b:sw?flag.c:r,why:flag.j.why,dec:null})}
     kept.push(r);
     keys(r).forEach(k=>{if(!idx.has(k))idx.set(k,[]);idx.get(k).push(r)});
   }
@@ -487,7 +495,7 @@ function viewRev(){
       let sa=show(a),sb=show(b);if(d&&a&&b&&(n==='Title'||n==='Authors'||n==='Journal'))[sa,sb]=wdiff(a,b);
       return'<tr class="'+(d?'diff':'')+'"><th>'+n+'</th><td>'+sa+'</td><td>'+sb+'</td></tr>';
     }).join('');
-    return'<div class="pair '+(p.dec?'done '+p.dec:'')+'"><span class="why">'+esc(p.why)+'</span><table><tr><th></th><th>A: '+esc(p.a.srcs.join(', '))+'</th><th>B: '+esc(p.b.src)+'</th></tr>'+rows+'</table><div class="row">'
+    return'<div class="pair '+(p.dec?'done '+p.dec:'')+'"><span class="why">'+esc(p.why)+'</span><table><tr><th></th><th>A: '+esc(p.a.srcs.join(', '))+'</th><th>B: '+esc(p.b.srcs.join(', '))+'</th></tr>'+rows+'</table><div class="row">'
     +'<button class="'+(p.dec==='merge'?'sel-merge':p.dec?'dim':'p')+'" data-d="merge" data-i="'+i+'">'+(p.dec==='merge'?'\u2713 ':'')+'Same paper: remove B</button><button class="'+(p.dec==='keep'?'sel-keep':p.dec?'dim':'')+'" data-d="keep" data-i="'+i+'">'+(p.dec==='keep'?'\u2713 ':'')+'Different papers: keep both</button>'
     +(p.dec?'<span>Decision: '+(p.dec==='merge'?'removed B':'kept both')+'</span>':'')+'</div></div>';
   }).join('');
@@ -610,7 +618,7 @@ function prismaDocx(){
   const tbl='<w:tbl><w:tblPr><w:tblW w:w="9060" w:type="dxa"/><w:jc w:val="center"/><w:tblLayout w:type="fixed"/></w:tblPr>'+grid+rows+'</w:tbl>';
   const day=new Date().toISOString().slice(0,10);
   const body=p('PRISMA 2020 flow diagram',true,'left',32)
-   +p('Identification and deduplication counts were filled in by Winnow (version 1.0.0) on '+day+'. Empty fields are to be completed after screening.',false,'left',18,true)
+   +p('Identification and deduplication counts were filled in by Winnow (version 1.1.0) on '+day+'. Empty fields are to be completed after screening.',false,'left',18,true)
    +tbl
    +p('',false)
    +p('From: Page MJ, McKenzie JE, Bossuyt PM, et al. The PRISMA 2020 statement: an updated guideline for reporting systematic reviews. BMJ 2021;372:n71. doi: 10.1136/bmj.n71. For more information, visit: http://www.prisma-statement.org/',false,'left',16,true);
