@@ -2,6 +2,7 @@
 
 ## 1.2.1
 
+- Automatic exclusion: a study with both an in-vitro and a clinical part is kept for screening. A title containing "clinical", or an abstract mentioning a clinical part or patients/participants being treated, now stops the in-vitro rule.
 - Automatic exclusion: random-allocation wording ("randomly assigned", "randomly allocated", "random assignment", "were randomised") now also marks a record as a trial, so a trial that calls itself a case-control or cohort study is not excluded on a MeSH term alone.
 
 ## 1.2.0
