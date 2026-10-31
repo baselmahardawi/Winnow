@@ -675,7 +675,7 @@ const EX={
   skipA:/\b(patients|participants|volunteers) (were|was)\b/,H:true}
 };
 const MIXPT=/trial|randomi[sz]ed|observational|comparative study|cohort|case-control|multicenter|evaluation study/i;
-const RCTRX=/\brandomi[sz]ed (controlled |clinical )?(trial|study)\b|\bclinical trial\b|\brct\b/,
+const RCTRX=/\brandomi[sz]ed (controlled |clinical )?(trial|study)\b|\bclinical trial\b|\brct\b|\brandomly (assigned|allocated|divided|distributed|allotted)\b|\brandom (assignment|allocation)\b|\bwere randomi[sz]ed\b|\brandomi[sz]ed (into|to)\b/,
  REVTI=/\b(review|meta[- ]?analys[ie]s|overview)\b/,
  REVAB=/\b(this|the present|our|current) (systematic |narrative |literature )?(review|meta[- ]?analys[ie]s)\b|\bdatabases? (were|was) searched\b|\bwe (searched|reviewed)\b/;
 function classify(r,on){
