@@ -1,10 +1,13 @@
 # Changelog
 
+## 1.2.1
+
+- Automatic exclusion: random-allocation wording ("randomly assigned", "randomly allocated", "random assignment", "were randomised") now also marks a record as a trial, so a trial that calls itself a case-control or cohort study is not excluded on a MeSH term alone.
+
 ## 1.2.0
 
 - Automatic exclusion: the phrases "retrospectively registered" and "retrospective registration" no longer count as evidence of a retrospective study.
 - Automatic exclusion: a record that describes itself as a randomised or clinical trial (and is not itself a review) is no longer excluded on a database label (PubMed publication type, Scopus or Web of Science document type), a MeSH term or retrospective wording in the abstract alone. It stays in the screening list.
-- Automatic exclusion: random-allocation wording ("randomly assigned", "randomly allocated", "random assignment", "were randomised") now also marks a record as a trial, so a trial that calls itself a case-control or cohort study is not excluded on a MeSH term alone.
 - Automatic exclusion: the label given by each database is now remembered per source. A PubMed publication type is trusted on its own (a PubMed "Comment" now goes to editorials, letters and errata). A Scopus or Web of Science "Review" label no longer excludes a record on its own as a narrative review: it needs a second database to agree and none to disagree (for example "Article" or a trial type), or review wording in the title or abstract. Otherwise the record stays in screening.
 - The evidence column of the auto-excluded CSV names the database(s) behind a document-type exclusion.
 - Deduplication rules are unchanged from 1.1.0.
