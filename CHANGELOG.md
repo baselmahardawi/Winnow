@@ -1,7 +1,12 @@
 # Changelog
 
+## 1.2.2
+
+- Fix: a title (or other field) containing a hidden line-separator character (U+2028, U+2029 or U+0085) made the reader drop the whole field, so the record had no title and could not be matched to its other copies. Such characters are now replaced by a space when a file is read. Found when a validation showed records with no title. In the reference review in which it was found, 3 duplicates were left in by 1.2.1 because of it.
+
 ## 1.2.1
 
+- Research version only: new adjudication choice "Same paper is also in the reference list (the tool could not match the two copies, e.g. no title): not an error" for records listed as only in Winnow. Such records are counted as matched, so a matching failure caused by missing titles is not scored as an error for either method. The accuracy summary CSV has one new last column with this count.
 - Automatic exclusion: a study with both an in-vitro and a clinical part is kept for screening. A title containing "clinical", or an abstract mentioning a clinical part or patients/participants being treated, now stops the in-vitro rule.
 - Automatic exclusion: random-allocation wording ("randomly assigned", "randomly allocated", "random assignment", "were randomised") now also marks a record as a trial, so a trial that calls itself a case-control or cohort study is not excluded on a MeSH term alone.
 
