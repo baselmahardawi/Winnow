@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.3
+
+- Automatic exclusion: a database label on its own no longer excludes a record. An exclusion based on a PubMed publication type, a Scopus or Web of Science document type, or a MeSH term (case reports, systematic reviews, narrative reviews, editorials and letters, retrospective studies, animal studies) now needs a second factor: a second database with the same label, or matching wording in the title or abstract (for example the word "case" for a case report, or an animal species for the MeSH term Animals). Exclusions based on wording in the title or abstract are unchanged.
+- Automatic exclusion: a label is also overruled when another label points the other way. A Scopus or Web of Science document type "Article", or a PubMed type such as a trial, cohort or observational study, keeps a record that PubMed labels a review, systematic review, editorial or letter. A PubMed trial label (randomised controlled trial, clinical trial) keeps a record from every label-based exclusion.
+- Automatic exclusion: the MeSH combination "Animals without Humans" no longer excludes a record whose title describes a human trial or names patients, humans or participants, or whose abstract says patients or participants were treated.
+- Found when a randomised controlled clinical trial in humans was excluded because its PubMed record carried the MeSH term Animals and no Humans term, and an original retrospective study was excluded because its PubMed record carried the publication type Letter.
+- Effect: fewer records are excluded automatically. Records excluded only by a label from a single database now stay in for screening.
+
 ## 1.2.2
 
 - Fix: a title (or other field) containing a hidden line-separator character (U+2028, U+2029 or U+0085) made the reader drop the whole field, so the record had no title and could not be matched to its other copies. Such characters are now replaced by a space when a file is read. Found when a validation showed records with no title. In the reference review in which it was found, 3 duplicates were left in by 1.2.1 because of it.
