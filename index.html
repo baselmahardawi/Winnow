@@ -191,7 +191,7 @@ body{display:flex;flex-direction:column;min-height:100vh}
 <div class="step"><h3>What to know</h3><p>Winnow is being validated, so check its results before relying on them. It reads RIS, PubMed (.nbib), Web of Science (plain text, tab-delimited, RIS or BibTeX), BibTeX and CSV files. Check the Removed tab and the flagged pairs before relying on a result. Trial registry entries are flagged when their title matches a publication or when their registration number is cited in the other record. The optional exclusion of study types uses only explicit statements in the title, abstract or database labels, and every excluded record is listed with its evidence so you can restore it.</p></div>
 <div class="step"><h3>Privacy and use</h3><p>Your files are read in your browser and never uploaded. The saved session stays in this browser only, so use Clear saved session when you finish a review. Winnow is released under the MIT licence.</p></div>
 </div></section>
-<p class="note">Records are processed in your browser and are not uploaded. Matching order: DOI, PMID, exact normalised title with year and first author, then fuzzy title similarity (bigram Dice). Anything short of a certain match is flagged, never removed silently. Version 1.2.4.</p>
+<p class="note">Records are processed in your browser and are not uploaded. Matching order: DOI, PMID, exact normalised title with year and first author, then fuzzy title similarity (bigram Dice). Anything short of a certain match is flagged, never removed silently. Version 1.2.5.</p>
 </main>
 <button class="totop" id="totop" aria-label="Back to top" title="Back to top"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Top</button>
 <script>
@@ -622,7 +622,7 @@ function prismaDocx(){
   const tbl='<w:tbl><w:tblPr><w:tblW w:w="9060" w:type="dxa"/><w:jc w:val="center"/><w:tblLayout w:type="fixed"/></w:tblPr>'+grid+rows+'</w:tbl>';
   const day=new Date().toISOString().slice(0,10);
   const body=p('PRISMA 2020 flow diagram',true,'left',32)
-   +p('Identification and deduplication counts were filled in by Winnow (version 1.2.4) on '+day+'. Empty fields are to be completed after screening.',false,'left',18,true)
+   +p('Identification and deduplication counts were filled in by Winnow (version 1.2.5) on '+day+'. Empty fields are to be completed after screening.',false,'left',18,true)
    +tbl
    +p('',false)
    +p('From: Page MJ, McKenzie JE, Bossuyt PM, et al. The PRISMA 2020 statement: an updated guideline for reporting systematic reviews. BMJ 2021;372:n71. doi: 10.1136/bmj.n71. For more information, visit: http://www.prisma-statement.org/',false,'left',16,true);
@@ -674,7 +674,7 @@ const EX={
   T:[/\bin (the |a |an )?(\w+ ){0,2}?(rats?|mice|mouse|rabbits?|dogs?|beagles?|pigs?|minipigs?|sheep|goats?|monkeys?|hamsters?|guinea pigs?)\b/,/\b(rat|mouse|murine|rabbit|canine|porcine|ovine|beagle) (model|models|calvaria|calvarial|tibia|femur|mandible)\b/,/\banimal (study|studies|model|models|experiment|experiments)\b/],
   skipT:/\b(patients?|humans?|participants|children|randomi[sz]ed|clinical|volunteers)\b/,
   A:[/\b(wistar|sprague[- ]dawley|new zealand white|c57bl|balb\/c|beagle|minipig|macaque)\b/,/\b(rats|mice|rabbits|dogs|pigs|sheep|goats|monkeys) were (used|divided|randomly|anesthetized|anaesthetized|sacrificed|euthani[sz]ed|assigned|implanted)\b/],
-  skipA:/\b(patients|participants|volunteers) (were|was)\b/,H:true,W:/\b(animals?|rats?|mice|mouse|rabbits?|dogs?|canine|beagles?|pigs?|porcine|minipigs?|sheep|ovine|goats?|monkeys?|murine|rodents?|in vivo|pre-?clinical)\b/}
+  skipA:/\b(patients|participants|volunteers) (were|was)\b/,H:true,W:/\b(animals?(?![- ](derived|origin|based))|rats?|mice|mouse|rabbits?|dogs?|canine|beagles?|pigs|minipigs?|sheep|ovine|goats?|monkeys?|murine|rodents?|pre-?clinical)\b/}
 };
 const MIXPT=/trial|randomi[sz]ed|observational|comparative study|cohort|case-control|multicenter|evaluation study/i;
 const RCTRX=/\brandomi[sz]ed (controlled |clinical )?(trial|study)\b|\bclinical trial\b|\brct\b|\brandomly (assigned|allocated|divided|distributed|allotted)\b|\brandom (assignment|allocation)\b|\bwere randomi[sz]ed\b|\brandomi[sz]ed (into|to)\b/,
@@ -699,8 +699,8 @@ function classify(r,on){
       const dbs=[...new Set(hits.map(x=>x.s))],txtOK=e.W&&e.W.test(txt)&&!(e.weakD&&hits.every(x=>x.k==='dt'));
       if(dbs.length>1||txtOK){const h=hits[0];return{k,why:(h.k==='pt'?'PubMed publication type: ':'Document type ')+h.v+' ('+(dbs.length>1?dbs.join(' and ')+' agree':'title or abstract wording agrees')+')'}}
     }
-    if(e.M&&!trial&&mh.some(x=>e.M.test(x))&&!(e.skipM&&mh.some(x=>e.skipM.test(x)))&&e.W&&e.W.test(txt))return{k,why:'MeSH term: Retrospective Studies (title or abstract wording agrees)'};
-    if(e.H&&mh.includes('Animals')&&!mh.includes('Humans')&&!trialLab&&!(RCTRX.test(ti)&&!REVTI.test(ti))&&!/\b(patients?|humans?|participants|volunteers)\b/.test(ti)&&!(e.skipA&&e.skipA.test(ab))&&e.W&&e.W.test(txt))return{k,why:'MeSH term: Animals (without Humans) (title or abstract wording agrees)'};
+    if(e.M&&!trial&&mh.some(x=>e.M.test(x))&&!(e.skipM&&mh.some(x=>e.skipM.test(x)))&&!(e.skipT&&e.skipT.test(ti))&&!(e.skipA&&e.skipA.test(ab))&&!/\b(systematic reviews?|meta-analys[ie]s|publications|included (studies|trials|articles)|literature)\b/.test(txt)&&e.W&&e.W.test(txt))return{k,why:'MeSH term: Retrospective Studies (title or abstract wording agrees)'};
+    if(e.H&&mh.includes('Animals')&&!mh.includes('Humans')&&!trialLab&&!(RCTRX.test(ti)&&!REVTI.test(ti))&&!/\b(patients?|humans?|participants|volunteers)\b/.test(ti)&&!(e.skipA&&e.skipA.test(ab))&&!/\b(patients?|participants?|volunteers?)\b|\bclinical (study|trial|pilot|research)\b|\b(non-?randomi[sz]ed|multi-?cent(er|re)|three-cent(er|re))\b/.test(ab)&&e.W&&e.W.test(txt))return{k,why:'MeSH term: Animals (without Humans) (title or abstract wording agrees)'};
     if(ab&&e.A&&!(e.trialGuard&&trial)&&!(e.skipA&&e.skipA.test(ab))){const m=hit(e.A,ab);if(m)return{k,why:'Abstract: "'+m[0].slice(0,80)+'"'}}
   }
   return null;

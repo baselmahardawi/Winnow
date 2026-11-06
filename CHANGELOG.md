@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.5
+
+- Automatic exclusion, retrospective studies: the MeSH term "Retrospective Studies" no longer excludes a record when the title or abstract also says "prospective" or "prospectively", or talks about publications, included studies, the literature or a systematic review. Found when a commentary on a systematic review was excluded as retrospective because its abstract said that studies in the review were collected "one prospectively and two retrospectively".
+- Automatic exclusion, animal studies: the MeSH term "Animals" (without "Humans") now excludes a record only when the title or abstract names an animal species or says "animal" or "pre-clinical", and the abstract does not mention patients, participants or volunteers, a clinical study, trial or pilot, a non-randomised or multicentre design. Words that describe materials or the setting, such as "porcine-derived membrane", "bovine", "animal-derived" and "in vivo", no longer count as animal wording. Found when a human pilot clinical study was excluded because its PubMed record carried the MeSH term Animals and its abstract mentioned a porcine-derived membrane and "in vivo" healing.
+
 ## 1.2.4
 
 - Export buttons: when automatic exclusion is on, the two export buttons now read "Export records to screen" (RIS and CSV) and the files are named `records-to-screen`, because they contain the records left after automatic exclusion, which is the "To screen" figure and not the "Unique records" figure. With automatic exclusion off, the buttons and file names are unchanged. No change to deduplication or to automatic exclusion.
