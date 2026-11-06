@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.4
+
+- Export buttons: when automatic exclusion is on, the two export buttons now read "Export records to screen" (RIS and CSV) and the files are named `records-to-screen`, because they contain the records left after automatic exclusion, which is the "To screen" figure and not the "Unique records" figure. With automatic exclusion off, the buttons and file names are unchanged. No change to deduplication or to automatic exclusion.
+
 ## 1.2.3
 
 - Automatic exclusion: a database label on its own no longer excludes a record. An exclusion based on a PubMed publication type, a Scopus or Web of Science document type, or a MeSH term (case reports, systematic reviews, narrative reviews, editorials and letters, retrospective studies, animal studies) now needs a second factor: a second database with the same label, or matching wording in the title or abstract (for example the word "case" for a case report, or an animal species for the MeSH term Animals). Exclusions based on wording in the title or abstract are unchanged.
