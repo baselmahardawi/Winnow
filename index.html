@@ -688,7 +688,7 @@ function classify(r,on){
   /* a record that describes itself as a trial is never excluded on a database label, MeSH term or abstract wording alone */
   const trialLab=(r.pt||[]).some(x=>/^(randomi[sz]ed controlled trial|clinical trial|controlled clinical trial|pragmatic clinical trial|clinical trial, phase [iv]+)$/i.test(x.trim()));
   const trial=((RCTRX.test(ti)||RCTRX.test(ab))&&!REVTI.test(ti)&&!REVAB.test(ab))||trialLab,txt=ti+' '+ab;
-  for(const k of on){
+  for(const k of Object.keys(EX).filter(k=>on.has?on.has(k):on.includes(k))){
     const e=EX[k];
     if(e.noRev&&(REVREC.test(ti)||REVAB2.test(ab)))continue;
     if(e.skipAll&&(e.skipAll.test(ti)||e.skipAll.test(ab)))continue;

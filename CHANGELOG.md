@@ -3,6 +3,7 @@
 ## 1.2.6
 
 - Automatic exclusion: the in-vitro, animal and retrospective categories no longer exclude a record that is itself a review. A title such as "a scoping review of in vitro evidence" or "a systematic review and meta-analysis of animal studies", or an abstract that says "this systematic review", is treated as a review and not as a study of that design. Such records are left to the systematic-review and narrative-review categories, so a user who excludes in-vitro studies but keeps reviews (for example in an overview of reviews) no longer loses them. Found during validation, when a scoping review of in-vitro evidence was excluded as an in-vitro study.
+- Automatic exclusion: the category shown for an excluded record no longer depends on the order in which the category boxes were ticked. Categories are now always checked in the same fixed order (case reports, systematic reviews, narrative reviews, editorials and letters, retrospective, in-vitro, animal). Which records are excluded does not change, only the category shown when a record fits more than one.
 
 ## 1.2.5
 
