@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.7
+
+- Automatic exclusion, narrative reviews: a record is no longer excluded as a narrative review when its title shows a different design. A title that says "review of 1001 cases", "a review of 523 procedures", "audit of N patients" or "analysis of N cases" describes a case series, and a title such as "a literature review and pilot study" or "a review and prospective study" describes a primary study together with a review. Such records are kept for screening. This applies to every route to the narrative-review category (title wording, abstract wording, PubMed publication type, Scopus or Web of Science document type). Found during validation, when a literature review combined with a pilot study, and two retrospective case series typed "Review" in PubMed, were excluded as narrative reviews.
+- Automatic exclusion, retrospective studies: a title of the form "review of N cases/patients/procedures/subjects/records" or "audit of N ..." now counts as a retrospective study, unless the title also refers to the literature or to published cases. The word "retrospective" no longer excludes a record when it describes what patients recalled rather than the design, as in "retrospective preference", "retrospective opinion" or "retrospective perception". No change to deduplication.
+
 ## 1.2.6
 
 - Automatic exclusion: the in-vitro, animal and retrospective categories no longer exclude a record that is itself a review. A title such as "a scoping review of in vitro evidence" or "a systematic review and meta-analysis of animal studies", or an abstract that says "this systematic review", is treated as a review and not as a study of that design. Such records are left to the systematic-review and narrative-review categories, so a user who excludes in-vitro studies but keeps reviews (for example in an overview of reviews) no longer loses them. Found during validation, when a scoping review of in-vitro evidence was excluded as an in-vitro study.
