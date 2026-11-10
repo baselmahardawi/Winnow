@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.6
+
+- Automatic exclusion: the in-vitro, animal and retrospective categories no longer exclude a record that is itself a review. A title such as "a scoping review of in vitro evidence" or "a systematic review and meta-analysis of animal studies", or an abstract that says "this systematic review", is treated as a review and not as a study of that design. Such records are left to the systematic-review and narrative-review categories, so a user who excludes in-vitro studies but keeps reviews (for example in an overview of reviews) no longer loses them. Found during validation, when a scoping review of in-vitro evidence was excluded as an in-vitro study.
+
 ## 1.2.5
 
 - Automatic exclusion, retrospective studies: the MeSH term "Retrospective Studies" no longer excludes a record when the title or abstract also says "prospective" or "prospectively", or talks about publications, included studies, the literature or a systematic review. Found when a commentary on a systematic review was excluded as retrospective because its abstract said that studies in the review were collected "one prospectively and two retrospectively".
